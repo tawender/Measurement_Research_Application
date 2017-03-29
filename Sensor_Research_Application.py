@@ -19,17 +19,35 @@ num_test_conditions = 8
 
 class App:
     def __init__(self):
-        self.root = Tk()
+		self.root = Tk()
 
-        self.create_fixture_select_section()
-        self.create_mfc_control_section()
-        self.create_fixture_monitoring_section()
-        self.create_exit_button()
+		self.create_menu()
+		self.create_fixture_select_section()
+		self.create_mfc_control_section()
+		self.create_fixture_monitoring_section()
+		self.create_exit_button()	
 
-        self.root.title("NEA Sensor Research")
-        self.root.geometry('1300x550')
-        self.root.mainloop()
 
+		self.root.title("NEA Sensor Research")
+		self.root.geometry('1300x550')
+		self.root.mainloop()
+		
+	def create_menu(self):
+		
+		menubar = Menu(self.root)
+
+		filemenu = Menu(menubar,tearoff=0)
+		filemenu.add_command(label="Save")
+		filemenu.add_command(label="Save as...")
+		filemanu.add_separator()
+		filemenu.add_command("Exit",command=self.exitProgram)
+		menubar.add_cascade(label="File",menu=filemenu)
+
+		helpmenu = Menu(menubar,tearoff=0)
+		helpmenu.add_command(label="About...")
+		menubar.add_cascade(label="Help",memu=helpmenu)
+
+		self.root.config(menu=menubar)
 
 
     def create_fixture_select_section(self):
@@ -52,11 +70,11 @@ class App:
 
         #create fixture selection radio buttons
         for lbl, portNum in self.fixture_selections:
-        	Radiobutton(self.fixture_selection_frame,
+        	Radiobutton(fixture_selection_frame,
         				text=lbl,
         				padx=5,
         				variable=self.fixture_selection,
-        				command=select_fixture,
+        				command=self.select_fixture,
         				value=portNum).grid(sticky=W)
 
 
@@ -70,42 +88,40 @@ class App:
         mfc_gas = []
         for mfc_num in range(num_MFCs):
         	#checkbox to enable this MFC
-        	Label(mfc_control_frame,text="enable").grid(row=0,column=1+mfc_num*4,columnspan=2,sticky=E)
+        	Label(mfc_control_frame,text="enable").grid(row=0,column=3+mfc_num*4,columnspan=2,sticky=E)
         	cb = Checkbutton(mfc_control_frame)
-        	cb.grid(row=0,column=3+mfc_num*4,sticky=W)
+        	cb.grid(row=0,column=5+mfc_num*4,sticky=W)
         	mfc_checkboxes.append(cb)
         	#MFC ID for communication
-        	Label(mfc_control_frame,text="MFC ID").grid(row=1,column=1+mfc_num*4,sticky=E)
+        	Label(mfc_control_frame,text="    MFC ID").grid(row=1,column=3+mfc_num*4,sticky=E)
         	e = Entry(mfc_control_frame,width=2)
-        	e.grid(row=1,column=2+mfc_num*4,sticky=W)
+        	e.grid(row=1,column=4+mfc_num*4,sticky=W)
         	mfc_ids.append(e)
         	#type of gas MFC will control
-        	Label(mfc_control_frame,text="gas").grid(row=1,column=3+mfc_num*4,sticky=E)
+        	Label(mfc_control_frame,text="gas").grid(row=1,column=5+mfc_num*4,sticky=E)
         	e = Entry(mfc_control_frame,width=4)
-        	e.grid(row=1,column=4+mfc_num*4,sticky=W)
+        	e.grid(row=1,column=6+mfc_num*4,sticky=W)
         	mfc_gas.append(e)
 
         test_condition_checkboxes = []
         test_condition_times = []
         test_condition_settings = []
         for test_condition in range(num_test_conditions):
-        	#checkbox to enable test condition
-        	cb = Checkbutton(mfc_control_frame)
-        	cb.grid(row=2+test_condition,column=0,sticky=W,pady=3)
-        	test_condition_checkboxes.append(cb)
-        	for mfc_num in range(num_MFCs):
-        		#time this test condition will last
-        		Label(mfc_control_frame,text="    seconds:").grid(row=2+test_condition,column=1+mfc_num*4,sticky=E)
-        		e = Entry(mfc_control_frame,width=3)
-        		e.grid(row=2+test_condition,column=2+mfc_num*4,sticky=W)
-        		test_condition_times.append(e)
-        		Label(mfc_control_frame,text="scfm:").grid(row=2+test_condition,column=3+mfc_num*4,sticky=E)
-        		e = Entry(mfc_control_frame,width=3)
-        		e.grid(row=2+test_condition,column=4+mfc_num*4,sticky=W)
-        		test_condition_settings.append(e)
-
-
-
+			#checkbox to enable test condition
+			cb = Checkbutton(mfc_control_frame)
+			cb.grid(row=2+test_condition,column=0,sticky=W,pady=3)
+			test_condition_checkboxes.append(cb)
+			#time this test condition will last
+			Label(mfc_control_frame,text="seconds:").grid(row=2+test_condition,column=1,sticky=E)
+			e = Entry(mfc_control_frame,width=4)
+			e.grid(row=2+test_condition,column=2,sticky=W)
+			test_condition_times.append(e)
+			for mfc_num in range(num_MFCs):
+				Label(mfc_control_frame,text="scfm:").grid(row=2+test_condition,column=4+mfc_num*4,sticky=E)
+				e = Entry(mfc_control_frame,width=3)
+				e.grid(row=2+test_condition,column=5+mfc_num*4,sticky=W)
+				test_condition_settings.append(e)
+        		
 
     def create_fixture_monitoring_section(self):
         #create chip fixture monitor section
@@ -127,7 +143,7 @@ class App:
 
     def create_exit_button(self):
         #create button used to exit the application
-        exitButton = Button(self.root, text="Exit", command=exitProgram, height=2,
+        exitButton = Button(self.root, text="Exit", command=self.exitProgram, height=2,
                             width=10).grid()
 
 
@@ -137,7 +153,7 @@ class App:
     #def read_config_file():
 
 
-    def select_fixture():
+    def select_fixture(self):
     	#find current radio button selection
     	fx = self.fixture_selection.get()
 
@@ -150,15 +166,15 @@ class App:
     		GPIO.output(fx,GPIO.LOW)
 
 
-    def exitProgram():
+    def exitProgram(self):
         GPIO.cleanup()
         self.root.quit()
 
 
-    def onChange():
+    def onChange(self):
     	pass
 
     #-----------------------------------------------------------
 
 
-
+app=App()
