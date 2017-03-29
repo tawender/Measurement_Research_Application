@@ -1,4 +1,5 @@
 from Tkinter import *
+import tkFont
 import RPi.GPIO as GPIO
 from ConfigParser import ConfigParser
 
@@ -14,6 +15,8 @@ GPIO.setup(fixture_GPIO_ports, GPIO.OUT, initial=GPIO.HIGH)
 #screen layout
 num_MFCs = 6
 num_test_conditions = 8
+
+
 		
 #-----------------------------------------------------------
 #----------------function definitions-----------------------
@@ -33,11 +36,17 @@ def select_fixture():
 		GPIO.output(fx,GPIO.LOW)
         
         
-        
 def exitProgram():
     GPIO.cleanup()
     root.quit()
+    
+
+def onChange():
+	pass
+	
 #-----------------------------------------------------------
+
+
 
 
 
@@ -73,7 +82,7 @@ for lbl, portNum in fixture_selections:
 #-------------------
 #create MFC control section
 mfc_control_frame = LabelFrame(root,text="MFC Control")
-mfc_control_frame.grid(row=0,column=0,padx=10,pady=10,ipady=5)
+mfc_control_frame.grid(row=0,column=0,padx=10,pady=10,ipady=5,columnspan=2)
 
 mfc_checkboxes = []
 mfc_ids = []
@@ -116,8 +125,39 @@ for test_condition in range(num_test_conditions):
 #-------------------
 
 
+
+
+#-------------------
+#create chip fixture monitor section
+chip_fixture_monitor_frame = LabelFrame(root,text="Chip Fixture Monitor")
+chip_fixture_monitor_frame.grid(row=1,column=1,padx=10,pady=10,ipady=5,sticky=W)
+
+PHT_sensor_font = tkFont.Font(family="Helvetica",size=11)
+Label(chip_fixture_monitor_frame,text="Temperature:",font=PHT_sensor_font).grid(row=0,column=0,sticky=E)
+Label(chip_fixture_monitor_frame,text="25.1",font=PHT_sensor_font,borderwidth=2,relief='sunken',width=6).grid(row=0,column=1)
+Label(chip_fixture_monitor_frame,text="*C",font=PHT_sensor_font).grid(row=0,column=2,sticky=W)
+Label(chip_fixture_monitor_frame,text="Humidity:",font=PHT_sensor_font).grid(row=1,column=0,sticky=E)
+Label(chip_fixture_monitor_frame,text="45",font=PHT_sensor_font,borderwidth=2,relief='sunken',width=6).grid(row=1,column=1)
+Label(chip_fixture_monitor_frame,text="%RH",font=PHT_sensor_font).grid(row=1,column=2,sticky=W)
+Label(chip_fixture_monitor_frame,text="Pressure:",font=PHT_sensor_font).grid(row=2,column=0,sticky=E)
+Label(chip_fixture_monitor_frame,text="1000.5",font=PHT_sensor_font,borderwidth=2,relief='sunken',width=6).grid(row=2,column=1)
+Label(chip_fixture_monitor_frame,text="mbar",font=PHT_sensor_font).grid(row=2,column=2,sticky=W)
+
+#-------------------
+
+
+
+#-------------------
 #create button used to exit the application
 exitButton = Button(root, text="Exit", command=exitProgram, height=2,
+                    width=10).grid()
+#-------------------
+
+
+
+#-------------------
+#create button used to exit the application
+exitButton = Button(root, text="Change", command=onChange, height=2,
                     width=10).grid()
 #-------------------
 
