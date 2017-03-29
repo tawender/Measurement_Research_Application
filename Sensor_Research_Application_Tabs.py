@@ -1,4 +1,5 @@
 from Tkinter import *
+import ttk
 import tkFont
 import RPi.GPIO as GPIO
 from ConfigParser import ConfigParser
@@ -19,18 +20,28 @@ num_test_conditions = 8
 
 class App:
     def __init__(self):
-		self.root = Tk()
+        self.root = Tk()
 
-		self.create_menu()
-		self.create_fixture_select_section()
-		self.create_test_configuration_section()
-		self.create_fixture_monitoring_section()
-		self.create_exit_button()
+        self.create_menu()
+        self.create_main_panel()
+        self.create_fixture_select_section()
+        self.create_test_configuration_section()
+        self.create_fixture_monitoring_section()
+        self.create_exit_button()
 
 
-		self.root.title("NEA Sensor Research")
-		self.root.geometry('1300x550')
-		self.root.mainloop()
+        self.root.title("NEA Sensor Research")
+        self.root.geometry('1300x550')
+        self.root.mainloop()
+		
+		
+    def create_main_panel(self):
+		
+        mainPanel = Frame(self.root)
+        mainPanel.grid(sticky=N,row=)
+
+        self.tabs = ttk.Notebook(mainPanel)
+        self.tabs.grid(row=0,column=0)
 
     def create_menu(self):
 
@@ -123,27 +134,25 @@ class App:
 
 
     def create_fixture_monitoring_section(self):
-        #create chip fixture monitor section
-        chip_fixture_monitor_frame = LabelFrame(self.root,text="Chip Fixture Monitor")
-        chip_fixture_monitor_frame.grid(row=1,column=1,padx=10,pady=10,ipady=5,sticky=W)
+		#create chip fixture monitor section
+		chip_fixture_monitor_frame = Frame(self.tabs,name='fixturemonitor')
 
-        PHT_sensor_font = tkFont.Font(family="Helvetica",size=11)
-        Label(chip_fixture_monitor_frame,text="Temperature:",font=PHT_sensor_font).grid(row=0,column=0,sticky=E)
-        Label(chip_fixture_monitor_frame,text="25.1",font=PHT_sensor_font,borderwidth=2,relief='sunken',width=6).grid(row=0,column=1)
-        Label(chip_fixture_monitor_frame,text="*C",font=PHT_sensor_font).grid(row=0,column=2,sticky=W)
-        Label(chip_fixture_monitor_frame,text="Humidity:",font=PHT_sensor_font).grid(row=1,column=0,sticky=E)
-        Label(chip_fixture_monitor_frame,text="45",font=PHT_sensor_font,borderwidth=2,relief='sunken',width=6).grid(row=1,column=1)
-        Label(chip_fixture_monitor_frame,text="%RH",font=PHT_sensor_font).grid(row=1,column=2,sticky=W)
-        Label(chip_fixture_monitor_frame,text="Pressure:",font=PHT_sensor_font).grid(row=2,column=0,sticky=E)
-        Label(chip_fixture_monitor_frame,text="1000.5",font=PHT_sensor_font,borderwidth=2,relief='sunken',width=6).grid(row=2,column=1)
-        Label(chip_fixture_monitor_frame,text="mbar",font=PHT_sensor_font).grid(row=2,column=2,sticky=W)
+		PHT_sensor_font = tkFont.Font(family="Helvetica",size=11)
+		Label(chip_fixture_monitor_frame,text="Temperature:",font=PHT_sensor_font).grid(row=0,column=0,sticky=E)
+		Label(chip_fixture_monitor_frame,text="25.1",font=PHT_sensor_font,borderwidth=2,relief='sunken',width=6).grid(row=0,column=1)
+		Label(chip_fixture_monitor_frame,text="*C",font=PHT_sensor_font).grid(row=0,column=2,sticky=W)
+		Label(chip_fixture_monitor_frame,text="Humidity:",font=PHT_sensor_font).grid(row=1,column=0,sticky=E)
+		Label(chip_fixture_monitor_frame,text="45",font=PHT_sensor_font,borderwidth=2,relief='sunken',width=6).grid(row=1,column=1)
+		Label(chip_fixture_monitor_frame,text="%RH",font=PHT_sensor_font).grid(row=1,column=2,sticky=W)
+		Label(chip_fixture_monitor_frame,text="Pressure:",font=PHT_sensor_font).grid(row=2,column=0,sticky=E)
+		Label(chip_fixture_monitor_frame,text="1000.5",font=PHT_sensor_font,borderwidth=2,relief='sunken',width=6).grid(row=2,column=1)
+		Label(chip_fixture_monitor_frame,text="mbar",font=PHT_sensor_font).grid(row=2,column=2,sticky=W)
 
-
+		self.tabs.add(chip_fixture_monitor_frame,text='Fixture Monitoring')
 
     def create_exit_button(self):
-        #create button used to exit the application
-        exitButton = Button(self.root, text="Exit", command=self.exitProgram, height=2,
-                            width=10).grid()
+		#create button used to exit the application
+		exitButton = Button(self.root, text="Exit", command=self.exitProgram, height=2,width=10).grid()
 
 
 
