@@ -25,29 +25,29 @@ class App:
 		self.create_fixture_select_section()
 		self.create_mfc_control_section()
 		self.create_fixture_monitoring_section()
-		self.create_exit_button()	
+		self.create_exit_button()
 
 
 		self.root.title("NEA Sensor Research")
 		self.root.geometry('1300x550')
 		self.root.mainloop()
-		
-	def create_menu(self):
-		
-		menubar = Menu(self.root)
 
-		filemenu = Menu(menubar,tearoff=0)
-		filemenu.add_command(label="Save")
-		filemenu.add_command(label="Save as...")
-		filemanu.add_separator()
-		filemenu.add_command("Exit",command=self.exitProgram)
-		menubar.add_cascade(label="File",menu=filemenu)
+    def create_menu(self):
 
-		helpmenu = Menu(menubar,tearoff=0)
-		helpmenu.add_command(label="About...")
-		menubar.add_cascade(label="Help",memu=helpmenu)
+        menubar = Menu(self.root)
 
-		self.root.config(menu=menubar)
+        filemenu = Menu(menubar,tearoff=0)
+        filemenu.add_command(label="Save")
+        filemenu.add_command(label="Save as...")
+        filemanu.add_separator()
+        filemenu.add_command("Exit",command=self.exitProgram)
+        menubar.add_cascade(label="File",menu=filemenu)
+
+        helpmenu = Menu(menubar,tearoff=0)
+        helpmenu.add_command(label="About...")
+        menubar.add_cascade(label="Help",memu=helpmenu)
+
+        self.root.config(menu=menubar)
 
 
     def create_fixture_select_section(self):
@@ -121,7 +121,7 @@ class App:
 				e = Entry(mfc_control_frame,width=3)
 				e.grid(row=2+test_condition,column=5+mfc_num*4,sticky=W)
 				test_condition_settings.append(e)
-        		
+
 
     def create_fixture_monitoring_section(self):
         #create chip fixture monitor section
