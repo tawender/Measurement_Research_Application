@@ -37,6 +37,7 @@ class App:
         self.create_fixture_select_section()
         self.create_test_configuration_section()
         self.create_fixture_monitoring_section()
+        self.create_monitor_control_section()
         self.create_exit_button()
 
         self.tabs.add(self.tab1_frame,text='Fixture Control')
@@ -53,7 +54,7 @@ class App:
         self.onUpdate()
 
         self.root.title("NEA Sensor Research")
-        self.root.geometry('1300x750')
+        self.root.geometry('1300x850')
         self.root.mainloop()
 
     def create_test_configuration_section(self):
@@ -154,7 +155,26 @@ class App:
             l.grid(row=4+sensor,column=1)
             self.sensor_readouts.append(l)
             Label(self.chip_fixture_monitor_frame,text="Kohms").grid(row=4+sensor,column=2)
+            
+    def create_monitor_control_section(self):
+        self.monitor_controls_frame = LabelFrame(self.tab1_frame,text="Monitor Controls",padx=10,pady=10)
+        self.monitor_controls_frame.grid(row=1,column=0,padx=10,pady=10,sticky=N)
 
+        self.monitor_start_button = Button(self.monitor_controls_frame,text="Start",command=self.start_monitor,
+                                                                                                        height=1,width=5).grid(row=0,column=0)
+        self.monitor_stop_button = Button(self.monitor_controls_frame,text="Stop",command=self.start_monitor,
+                                                                                                        height=1,width=5).grid(row=0,column=1)
+        self.monitor_pause_button = Button(self.monitor_controls_frame,text="Pause",command=self.start_monitor,
+                                                                                                        height=1,width=5).grid(row=0,column=2)
+
+	def create_mfc_monitors(self):
+		self.mfc_monitors_frame = LabelFrame(self.tab1_frame,text="MFC Monitors",padx=10,pady=10)
+		self.mfc_monitors_frame.grid(row=0,column=2,padx=10,pady=10)
+		
+		self.mfc_monitors = []
+		for i in range(num_MFCs):
+			
+		
     def create_exit_button(self):
         #create button used to exit the application
         exitButton = Button(self.mainPanel, text="Exit", command=self.exitProgram, height=2,width=10).grid(pady=10)
@@ -175,6 +195,8 @@ class App:
         menubar.add_cascade(label="Help",menu=helpmenu)
 
         self.root.config(menu=menubar)
+        
+        
 
     #-----------------------------------------------------------
     #----------------function definitions-----------------------
@@ -191,6 +213,9 @@ class App:
 		self.BME280_Pres['text'] = "%.0f"%(p)
 		
 		return (t,p,h)
+		
+    def start_monitor(self):
+		pass
 
 
     def select_fixture(self):
