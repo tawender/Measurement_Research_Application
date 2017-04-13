@@ -70,7 +70,7 @@ class FlowMeter(object):
         Returns:
             The state of the flow controller, as a dictionary.
         """
-        command = '*@={addr}\r'.format(addr=self.address)
+        command = '{addr}\r'.format(addr=self.address)
         line = self._write_and_read(command, retries)
         spl = line.split()
         address, values = spl[0], spl[1:]
