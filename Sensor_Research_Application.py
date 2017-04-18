@@ -11,6 +11,7 @@ import matplotlib
 matplotlib.use("TkAgg")
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2TkAgg
 from matplotlib.figure import Figure
+import matplotlib.animation as an
 
 
 
@@ -75,7 +76,21 @@ class App:
         self.tabs.add(self.tab1_frame,text='Fixture Control')
         self.tabs.add(self.tab2_frame,text='Test Condition Setup')
 
+        self.root.protocol("WM_DELETE_WINDOW", self.onExit)
+
         self.create_menu()
+
+        self.sample_interval_msec = 500
+        self.plot_span_seconds = 30
+        self.sampleTime = 0
+        self.sampleTimes = []
+        self.temperatures = []
+        self.humidities = []
+        self.t_color = 'b'
+        self.h_color = 'm'
+        self.create_plot()
+        self.monitor_state = None
+
         
         self.fixture_selected = False
         self.pi = pigpio.pi()
@@ -163,7 +178,7 @@ class App:
     def create_fixture_monitoring_section(self):
 		#create chip fixture monitor section
         self.chip_fixture_monitor_frame = LabelFrame(self.tab1_frame,text="No Test Fixture Selected",padx=10,pady=10)
-        self.chip_fixture_monitor_frame.grid(row=0,column=0,padx=10,pady=10,sticky=N)
+        self.chip_fixture_monitor_frame.grid(row=0,rowspan=2,column=0,padx=10,pady=10,sticky=N)
 
         PHT_sensor_font = tkFont.Font(family="Helvetica",size=11)
         Label(self.chip_fixture_monitor_frame,text="Temperature:",font=PHT_sensor_font).grid(row=0,column=0,sticky=E)
@@ -178,15 +193,16 @@ class App:
         self.BME280_Pres = Label(self.chip_fixture_monitor_frame,text="N/A",font=PHT_sensor_font,borderwidth=2,relief='sunken',width=6)
         self.BME280_Pres.grid(row=2,column=1)
         Label(self.chip_fixture_monitor_frame,text="Pa",font=PHT_sensor_font).grid(row=2,column=2,sticky=W)
-        ttk.Separator(self.chip_fixture_monitor_frame,orient='horizontal').grid(row=3,column=0,columnspan=3,sticky='ew',pady=10)
-        
+        ttk.Separator(self.chip_fixture_monitor_frame,orient='horizontal').grid(row=3,column=0,columnspan=3,sticky='ew',pady=5)
+        Label(self.chip_fixture_monitor_frame,text="Gas Sensor Readings (Kohms)").grid(row=4,column=0,columnspan=3,pady=5)
+
         self.sensor_readouts = []
         for sensor in range(num_sensors_on_chip):
-            Label(self.chip_fixture_monitor_frame,text="Sensor #%2d"%(sensor+1)).grid(row=4+sensor,column=0,sticky=E)
-            l=Label(self.chip_fixture_monitor_frame,text="5.12",borderwidth=2,relief='sunken',width=7)
-            l.grid(row=4+sensor,column=1)
+            Label(self.chip_fixture_monitor_frame,text="%2d"%(sensor+1)).grid(row=5+sensor,column=0,sticky=E)
+            l=Label(self.chip_fixture_monitor_frame,text="5.12",borderwidth=2,relief='sunken',width=4)
+            l.grid(row=5+sensor,column=1)
             self.sensor_readouts.append(l)
-            Label(self.chip_fixture_monitor_frame,text="Kohms").grid(row=4+sensor,column=2)
+            Label(self.chip_fixture_monitor_frame,text="K").grid(row=5+sensor,column=2)
             
     def create_monitor_control_section(self):
         self.monitor_controls_frame = LabelFrame(self.tab1_frame,text="Monitor Controls",padx=10,pady=10)
@@ -248,18 +264,13 @@ class App:
         self.mfc_B = alicat.FlowController(address='B')
         self.mfc_monitors[0].flowController = self.mfc_B
         self.mfc_monitors[0].address = 'B'
-        print self.mfc_B.get()
-        print 'done creating 1'
         
         self.mfc_C = alicat.FlowController(address='C')
         self.mfc_monitors[1].flowController = self.mfc_C
         self.mfc_monitors[1].address = 'C'
-        print self.mfc_C.get()
-        print 'done creating 2'
-
+        
     def create_exit_button(self):
-        #create button used to exit the application
-        exitButton = Button(self.mainPanel, text="Exit", command=self.exitProgram, height=2,width=10).grid(pady=10)
+        exitButton = Button(self.mainPanel, text="Exit", command=self.onExit, height=2,width=10).grid(pady=10)
 
     def create_menu(self):
 
@@ -269,7 +280,7 @@ class App:
         filemenu.add_command(label="Save")
         filemenu.add_command(label="Save as...")
         filemenu.add_separator()
-        filemenu.add_command(label="Exit",command=self.exitProgram)
+        filemenu.add_command(label="Exit",command=self.onExit)
         menubar.add_cascade(label="File",menu=filemenu)
 
         helpmenu = Menu(menubar,tearoff=0)
@@ -278,30 +289,92 @@ class App:
 
         self.root.config(menu=menubar)
         
+    def create_plot(self):
+
+        self.fig = Figure(figsize=(10,5), dpi=100)
+        self.fig.suptitle("Temperature/Humidity")
+        self.ax = self.fig.add_subplot(111)
+        self.t_line, = self.ax.plot(self.sampleTimes,self.temperatures,self.t_color+'-')
+        self.ax.set_xlabel('time(seconds)')
+        self.ax.set_ylabel('Temperature(*C)',color=self.t_color)
+        self.ax.set_ylim(20,30)
+        self.ax.set_xlim(0,self.plot_span_seconds)
+        self.ax.ticklabel_format(useOffset=False)
+        self.ax.tick_params('y',colors=self.t_color)
+        self.ax.set_axis_bgcolor('black')
+        self.ax.grid(True,color='gray')
+        
+        self.ax2 = self.ax.twinx()
+        self.h_line, = self.ax2.plot(self.sampleTimes,self.humidities,self.h_color+'-')
+        self.ax2.set_ylabel('Humidity(%RH)',color=self.h_color)
+        self.ax2.tick_params('y',colors=self.h_color)
+        self.ax2.set_ylim(0,100)
+        self.ax2.set_xlim(0,self.plot_span_seconds)
+        
+        canvas = FigureCanvasTkAgg(self.fig, self.tab1_frame)
+        canvas.show()
+        canvas.get_tk_widget().grid(row=1,rowspan=2,column=1,columnspan=6,padx=5,pady=10)
+        
+        self.animation = an.FuncAnimation(self.fig,self.animate,interval=self.sample_interval_msec,blit=False)
+        
+
+    def animate(self,i):
+        if self.monitor_state == 'running':
+            self.read_BME280()
+            
+            self.t_line.set_data(self.sampleTimes,self.temperatures)
+            self.h_line.set_data(self.sampleTimes,self.humidities)
+
+            self.update_plot()
+              
+            return self.t_line,self.h_line
+
+    def update_plot(self):
+        if len(self.temperatures) > 0:
+            self.ax.set_ylim([min(self.temperatures)-1,max(self.temperatures)+1])
+            self.ax2.set_ylim([min(self.humidities)-5,max(self.humidities)+5])
+
+        if self.scroll_checkbox.get():
+
+            if self.sampleTime >= self.plot_span_seconds-1.0:
+                self.ax.set_xlim(self.sampleTime-self.plot_span_seconds+1.0,self.sampleTime+1.0)
+                self.ax2.set_xlim(self.sampleTime-self.plot_span_seconds+1.0,self.sampleTime+1.0)
+            else:
+                self.ax.set_xlim(0,self.plot_span_seconds)
+                self.ax2.set_xlim(0,self.plot_span_seconds)
+        else:
+
+            if self.sampleTime >= self.plot_span_seconds-1.0:
+                self.ax.set_xlim(0,max(self.sampleTimes)+5)
+                self.ax2.set_xlim(0,max(self.sampleTimes)+5)
+            else:
+                self.ax.set_xlim(0,INITIAL_XSPAN_SEC)
+                self.ax2.set_xlim(0,INITIAL_XSPAN_SEC)
+        
         
 
     #-----------------------------------------------------------
     #----------------function definitions-----------------------
     def onUpdate(self):
-		if self.fixture_selected:
-			self.readBME280()
+        if self.fixture_selected:
+                self.readBME280()
 
-		for monitor in self.mfc_monitors:
-                    monitor.update_readings()
-		
-			
-		self.root.after(1000,self.onUpdate)
+        for monitor in self.mfc_monitors:
+            monitor.update_readings()
+        
+                
+        self.root.after(1000,self.onUpdate)
 		
     def readBME280(self):
-		t, p, h = self.BME280sensor.read_data()
-		self.BME280_Temp['text'] = "%.2f"%(t)
-		self.BME280_Hum['text'] = "%.2f"%(h)
-		self.BME280_Pres['text'] = "%.0f"%(p)
-		
-		return (t,p,h)
+        t, p, h = self.BME280sensor.read_data()
+        self.BME280_Temp['text'] = "%.2f"%(t)
+        self.BME280_Hum['text'] = "%.2f"%(h)
+        self.BME280_Pres['text'] = "%.0f"%(p)
+        
+        return (t,p,h)
 		
     def start_monitor(self):
-		pass
+        pass
 
 
     def select_fixture(self):
@@ -338,8 +411,9 @@ class App:
 			self.BME280_Pres['text'] = "N/A"
 
 
-    def exitProgram(self):
+    def onExit(self):
         GPIO.cleanup()
+        #self.BME280sensor.cancel()
         self.pi.stop()
         for mfc in self.mfc_monitors:
             mfc.close()
