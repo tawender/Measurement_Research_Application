@@ -23,8 +23,9 @@ GPIO.setmode(GPIO.BCM)
 GPIO.setup(fixture_GPIO_ports, GPIO.OUT, initial=GPIO.HIGH)
 
 #screen layout
-num_MFCs = 2
-num_test_conditions = 8
+num_MFCs = 5
+num_MFC_displays = 2
+num_test_conditions = 20
 num_sensors_on_chip = 22
 
 class mfc_display:
@@ -86,8 +87,7 @@ class App:
         self.sampleTimes = []
         self.temperatures = []
         self.humidities = []
-        self.t_color = 'b'
-        self.h_color = 'm'
+        self.t_color = 'g'
         self.create_plot()
         self.monitor_state = None
 
@@ -181,28 +181,31 @@ class App:
         self.chip_fixture_monitor_frame.grid(row=0,rowspan=2,column=0,padx=10,pady=10,sticky=N)
 
         PHT_sensor_font = tkFont.Font(family="Helvetica",size=11)
-        Label(self.chip_fixture_monitor_frame,text="Temperature:",font=PHT_sensor_font).grid(row=0,column=0,sticky=E)
+        Label(self.chip_fixture_monitor_frame,text="Temperature:",font=PHT_sensor_font).grid(row=0,column=0,columnspan=3,sticky=E)
         self.BME280_Temp = Label(self.chip_fixture_monitor_frame,text="N/A",font=PHT_sensor_font,borderwidth=2,relief='sunken',width=6)
-        self.BME280_Temp.grid(row=0,column=1)
-        Label(self.chip_fixture_monitor_frame,text="*C",font=PHT_sensor_font).grid(row=0,column=2,sticky=W)
-        Label(self.chip_fixture_monitor_frame,text="Humidity:",font=PHT_sensor_font).grid(row=1,column=0,sticky=E)
+        self.BME280_Temp.grid(row=0,column=3)
+        Label(self.chip_fixture_monitor_frame,text="*C",font=PHT_sensor_font).grid(row=0,column=4,sticky=W)
+        Label(self.chip_fixture_monitor_frame,text="Humidity:",font=PHT_sensor_font).grid(row=1,column=0,columnspan=3,sticky=E)
         self.BME280_Hum = Label(self.chip_fixture_monitor_frame,text="N/A",font=PHT_sensor_font,borderwidth=2,relief='sunken',width=6)
-        self.BME280_Hum.grid(row=1,column=1)
-        Label(self.chip_fixture_monitor_frame,text="%RH",font=PHT_sensor_font).grid(row=1,column=2,sticky=W)
-        Label(self.chip_fixture_monitor_frame,text="Pressure:",font=PHT_sensor_font).grid(row=2,column=0,sticky=E)
+        self.BME280_Hum.grid(row=1,column=3)
+        Label(self.chip_fixture_monitor_frame,text="%RH",font=PHT_sensor_font).grid(row=1,column=4,sticky=W)
+        Label(self.chip_fixture_monitor_frame,text="Pressure:",font=PHT_sensor_font).grid(row=2,column=0,columnspan=3,sticky=E)
         self.BME280_Pres = Label(self.chip_fixture_monitor_frame,text="N/A",font=PHT_sensor_font,borderwidth=2,relief='sunken',width=6)
-        self.BME280_Pres.grid(row=2,column=1)
-        Label(self.chip_fixture_monitor_frame,text="Pa",font=PHT_sensor_font).grid(row=2,column=2,sticky=W)
-        ttk.Separator(self.chip_fixture_monitor_frame,orient='horizontal').grid(row=3,column=0,columnspan=3,sticky='ew',pady=5)
-        Label(self.chip_fixture_monitor_frame,text="Gas Sensor Readings (Kohms)").grid(row=4,column=0,columnspan=3,pady=5)
+        self.BME280_Pres.grid(row=2,column=3)
+        Label(self.chip_fixture_monitor_frame,text="Pa",font=PHT_sensor_font).grid(row=2,column=4,sticky=W)
+        ttk.Separator(self.chip_fixture_monitor_frame,orient='horizontal').grid(row=3,column=0,columnspan=5,sticky='ew',pady=5)
+        Label(self.chip_fixture_monitor_frame,text="Gas Sensor Readings (Kohms)").grid(row=4,column=0,columnspan=5,pady=5)
 
         self.sensor_readouts = []
+        self.sensor_checkboxes = []
         for sensor in range(num_sensors_on_chip):
-            Label(self.chip_fixture_monitor_frame,text="%2d"%(sensor+1)).grid(row=5+sensor,column=0,sticky=E)
-            l=Label(self.chip_fixture_monitor_frame,text="5.12",borderwidth=2,relief='sunken',width=4)
-            l.grid(row=5+sensor,column=1)
+            cb = Checkbutton(self.chip_fixture_monitor_frame)
+            cb.grid(row=5+sensor,column=0)
+            self.sensor_checkboxes.append(cb)
+            Label(self.chip_fixture_monitor_frame,text="%2d"%(sensor+1)).grid(row=5+sensor,column=1,sticky=E)
+            l=Label(self.chip_fixture_monitor_frame,text="5.12",borderwidth=2,relief='sunken',width=5)
+            l.grid(row=5+sensor,column=2)
             self.sensor_readouts.append(l)
-            Label(self.chip_fixture_monitor_frame,text="K").grid(row=5+sensor,column=2)
             
     def create_monitor_control_section(self):
         self.monitor_controls_frame = LabelFrame(self.tab1_frame,text="Monitor Controls",padx=10,pady=10)
@@ -223,7 +226,7 @@ class App:
         big_mfc_font = tkFont.Font(family="Helvetica",size=20)
         self.mfc_monitors = []
  
-        for i in range(num_MFCs):
+        for i in range(num_MFC_displays):
             m = mfc_display()
 
             Label(self.mfc_monitors_frame,text="PSIA",font=small_mfc_font).grid(row=0,column=4*i+0)
@@ -258,7 +261,7 @@ class App:
 
             self.mfc_monitors.append(m)
 
-            if i != num_MFCs-1:
+            if i != num_MFC_displays-1:
                 ttk.Separator(self.mfc_monitors_frame,orient='vertical').grid(row=0,column=4*i+3,rowspan=7,sticky='ns',padx=10)
 
         self.mfc_B = alicat.FlowController(address='B')
@@ -292,24 +295,17 @@ class App:
     def create_plot(self):
 
         self.fig = Figure(figsize=(10,5), dpi=100)
-        self.fig.suptitle("Temperature/Humidity")
+        self.fig.suptitle("Sensor Resistance")
         self.ax = self.fig.add_subplot(111)
         self.t_line, = self.ax.plot(self.sampleTimes,self.temperatures,self.t_color+'-')
         self.ax.set_xlabel('time(seconds)')
-        self.ax.set_ylabel('Temperature(*C)',color=self.t_color)
+        self.ax.set_ylabel('Resistance(kohms)')
         self.ax.set_ylim(20,30)
         self.ax.set_xlim(0,self.plot_span_seconds)
         self.ax.ticklabel_format(useOffset=False)
-        self.ax.tick_params('y',colors=self.t_color)
+        #self.ax.tick_params('y',colors=self.t_color)
         self.ax.set_axis_bgcolor('black')
         self.ax.grid(True,color='gray')
-        
-        self.ax2 = self.ax.twinx()
-        self.h_line, = self.ax2.plot(self.sampleTimes,self.humidities,self.h_color+'-')
-        self.ax2.set_ylabel('Humidity(%RH)',color=self.h_color)
-        self.ax2.tick_params('y',colors=self.h_color)
-        self.ax2.set_ylim(0,100)
-        self.ax2.set_xlim(0,self.plot_span_seconds)
         
         canvas = FigureCanvasTkAgg(self.fig, self.tab1_frame)
         canvas.show()
@@ -323,33 +319,27 @@ class App:
             self.read_BME280()
             
             self.t_line.set_data(self.sampleTimes,self.temperatures)
-            self.h_line.set_data(self.sampleTimes,self.humidities)
 
             self.update_plot()
               
-            return self.t_line,self.h_line
+            return self.t_line,
 
     def update_plot(self):
         if len(self.temperatures) > 0:
             self.ax.set_ylim([min(self.temperatures)-1,max(self.temperatures)+1])
-            self.ax2.set_ylim([min(self.humidities)-5,max(self.humidities)+5])
 
         if self.scroll_checkbox.get():
 
             if self.sampleTime >= self.plot_span_seconds-1.0:
                 self.ax.set_xlim(self.sampleTime-self.plot_span_seconds+1.0,self.sampleTime+1.0)
-                self.ax2.set_xlim(self.sampleTime-self.plot_span_seconds+1.0,self.sampleTime+1.0)
             else:
                 self.ax.set_xlim(0,self.plot_span_seconds)
-                self.ax2.set_xlim(0,self.plot_span_seconds)
         else:
 
             if self.sampleTime >= self.plot_span_seconds-1.0:
                 self.ax.set_xlim(0,max(self.sampleTimes)+5)
-                self.ax2.set_xlim(0,max(self.sampleTimes)+5)
             else:
                 self.ax.set_xlim(0,INITIAL_XSPAN_SEC)
-                self.ax2.set_xlim(0,INITIAL_XSPAN_SEC)
         
         
 
