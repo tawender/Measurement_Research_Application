@@ -1,6 +1,6 @@
 #***********************************************************
 # This version of the application is for communication with
-# switch boards using the SPI bus
+# measurement boards on the I2C bus
 #***********************************************************
 
 from Tkinter import *
