@@ -1,3 +1,8 @@
+#***********************************************************
+# This version of the application is for communication with
+# switch boards using the SPI bus
+#***********************************************************
+
 from Tkinter import *
 import ttk
 import tkFont
@@ -91,13 +96,13 @@ class App:
         self.create_plot()
         self.monitor_state = None
 
-        
+
         self.fixture_selected = False
         self.pi = pigpio.pi()
-        
+
         if not self.pi.connected:
 			raise RuntimeError("Pi not connected. Check pigpio use")
-	
+
         self.onUpdate()
 
         self.root.title("NEA Sensor Research")
@@ -206,7 +211,7 @@ class App:
             l=Label(self.chip_fixture_monitor_frame,text="5.12",borderwidth=2,relief='sunken',width=5)
             l.grid(row=5+sensor,column=2)
             self.sensor_readouts.append(l)
-            
+
     def create_monitor_control_section(self):
         self.monitor_controls_frame = LabelFrame(self.tab1_frame,text="Monitor Controls",padx=10,pady=10)
         self.monitor_controls_frame.grid(row=2,column=0,padx=10,pady=10,sticky=N)
@@ -225,7 +230,7 @@ class App:
         small_mfc_font = tkFont.Font(family="Helvetica",size=9)
         big_mfc_font = tkFont.Font(family="Helvetica",size=20)
         self.mfc_monitors = []
- 
+
         for i in range(num_MFC_displays):
             m = mfc_display()
 
@@ -267,11 +272,11 @@ class App:
         self.mfc_B = alicat.FlowController(address='B')
         self.mfc_monitors[0].flowController = self.mfc_B
         self.mfc_monitors[0].address = 'B'
-        
+
         self.mfc_C = alicat.FlowController(address='C')
         self.mfc_monitors[1].flowController = self.mfc_C
         self.mfc_monitors[1].address = 'C'
-        
+
     def create_exit_button(self):
         exitButton = Button(self.mainPanel, text="Exit", command=self.onExit, height=2,width=10).grid(pady=10)
 
@@ -291,7 +296,7 @@ class App:
         menubar.add_cascade(label="Help",menu=helpmenu)
 
         self.root.config(menu=menubar)
-        
+
     def create_plot(self):
 
         self.fig = Figure(figsize=(10,5), dpi=100)
@@ -306,22 +311,22 @@ class App:
         #self.ax.tick_params('y',colors=self.t_color)
         self.ax.set_axis_bgcolor('black')
         self.ax.grid(True,color='gray')
-        
+
         canvas = FigureCanvasTkAgg(self.fig, self.tab1_frame)
         canvas.show()
         canvas.get_tk_widget().grid(row=1,rowspan=2,column=1,columnspan=6,padx=5,pady=10)
-        
+
         self.animation = an.FuncAnimation(self.fig,self.animate,interval=self.sample_interval_msec,blit=False)
-        
+
 
     def animate(self,i):
         if self.monitor_state == 'running':
             self.read_BME280()
-            
+
             self.t_line.set_data(self.sampleTimes,self.temperatures)
 
             self.update_plot()
-              
+
             return self.t_line,
 
     def update_plot(self):
@@ -340,8 +345,8 @@ class App:
                 self.ax.set_xlim(0,max(self.sampleTimes)+5)
             else:
                 self.ax.set_xlim(0,INITIAL_XSPAN_SEC)
-        
-        
+
+
 
     #-----------------------------------------------------------
     #----------------function definitions-----------------------
@@ -351,36 +356,36 @@ class App:
 
         for monitor in self.mfc_monitors:
             monitor.update_readings()
-        
-                
+
+
         self.root.after(1000,self.onUpdate)
-		
+
     def readBME280(self):
         t, p, h = self.BME280sensor.read_data()
         self.BME280_Temp['text'] = "%.2f"%(t)
         self.BME280_Hum['text'] = "%.2f"%(h)
         self.BME280_Pres['text'] = "%.0f"%(p)
-        
+
         return (t,p,h)
-		
+
     def start_monitor(self):
         pass
 
 
     def select_fixture(self):
-		
+
         #testing previous selection state to handle BME280 sensor switching
         if self.fixture_selected:
             self.BME280sensor.cancel()
-                
+
         #find GPIO port associated with selected radio button
         fx = self.fixture_selection.get()
-        
-    	if fx:            
+
+    	if fx:
             self.fixture_selected = True
         else:
             self.fixture_selected = False
-    	
+
     	#find index of radio button selected
     	radio_index = self.fixture_selections.index([tup for tup in self.fixture_selections if fx in tup][0])
 
