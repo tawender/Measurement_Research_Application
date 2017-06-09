@@ -6,11 +6,9 @@
 from Tkinter import *
 import ttk
 import tkFont
-import RPi.GPIO as GPIO
 from ConfigParser import ConfigParser
 import BME_280
 import alicat
-import pigpio
 import time
 import matplotlib
 matplotlib.use("TkAgg")
@@ -18,17 +16,30 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolb
 from matplotlib.figure import Figure
 import matplotlib.animation as an
 
+import platform
+if platform.system() == 'Windows':
+    pass
+#    import os
+#    cwd = os.getcwd()
+#    ModulePath = cwd + "/WinLib"
+#    sys.path.append(ModulePath)
+#    import LaunchpadSPI as spidev
+else:
+    # raspberry pi SPI communication module
+#    import spidev
+    # raspberry pi input pin setup
+    import RPi.GPIO as GPIO
+    #setup GPIO for selecting a test fixture to monitor
+    GPIO.setmode(GPIO.BCM)
+    GPIO.setup(fixture_GPIO_ports, GPIO.OUT, initial=GPIO.HIGH)
+    import pigpio
 
 
 #list of which GPIO ports are used as fixture selection lines
 fixture_GPIO_ports = [4,17,22,5,6,13]
 
-#setup GPIO for selecting a test fixture to monitor
-GPIO.setmode(GPIO.BCM)
-GPIO.setup(fixture_GPIO_ports, GPIO.OUT, initial=GPIO.HIGH)
-
 #screen layout
-num_MFCs = 5
+num_MFCs = 20
 num_MFC_displays = 2
 num_test_conditions = 20
 num_sensors_on_chip = 22
@@ -98,10 +109,12 @@ class App:
 
 
         self.fixture_selected = False
-        self.pi = pigpio.pi()
 
-        if not self.pi.connected:
-			raise RuntimeError("Pi not connected. Check pigpio use")
+        if platform.system() == 'Linux':
+            self.pi = pigpio.pi()
+
+            if not self.pi.connected:
+    			raise RuntimeError("Pi not connected. Check pigpio use")
 
         self.onUpdate()
 
@@ -269,13 +282,14 @@ class App:
             if i != num_MFC_displays-1:
                 ttk.Separator(self.mfc_monitors_frame,orient='vertical').grid(row=0,column=4*i+3,rowspan=7,sticky='ns',padx=10)
 
-        self.mfc_B = alicat.FlowController(address='B')
-        self.mfc_monitors[0].flowController = self.mfc_B
-        self.mfc_monitors[0].address = 'B'
+        if platform.system() == 'Linux':
+            self.mfc_B = alicat.FlowController(address='B')
+            self.mfc_monitors[0].flowController = self.mfc_B
+            self.mfc_monitors[0].address = 'B'
 
-        self.mfc_C = alicat.FlowController(address='C')
-        self.mfc_monitors[1].flowController = self.mfc_C
-        self.mfc_monitors[1].address = 'C'
+            self.mfc_C = alicat.FlowController(address='C')
+            self.mfc_monitors[1].flowController = self.mfc_C
+            self.mfc_monitors[1].address = 'C'
 
     def create_exit_button(self):
         exitButton = Button(self.mainPanel, text="Exit", command=self.onExit, height=2,width=10).grid(pady=10)
@@ -354,8 +368,9 @@ class App:
         if self.fixture_selected:
                 self.readBME280()
 
-        for monitor in self.mfc_monitors:
-            monitor.update_readings()
+        if platform.system() == 'Linux':
+            for monitor in self.mfc_monitors:
+                monitor.update_readings()
 
 
         self.root.after(1000,self.onUpdate)
@@ -407,11 +422,12 @@ class App:
 
 
     def onExit(self):
-        GPIO.cleanup()
         #self.BME280sensor.cancel()
-        self.pi.stop()
-        for mfc in self.mfc_monitors:
-            mfc.close()
+        if platform.system() == 'Linux':
+            GPIO.cleanup()
+            self.pi.stop()
+            for mfc in self.mfc_monitors:
+                mfc.close()
         self.root.quit()
 
 

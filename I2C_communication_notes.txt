@@ -1,0 +1,21 @@
+Programming notes for I2C communication between Raspberry Pi(master)
+and multiple MSP430s(slaves) for setup and reading measurements
+
+---------------------------------------------------------------
+Application responsibilities:
+
+	-Querry I2C bus to find connected fixtures
+	-Sends pulse to trigger MSP430 measurements
+	-Sends command to read all sensor measurements(4-bytes each)
+	-Sends command to set UV LED1 power level (PWM)
+	-Sends command to turn UV LED1 on
+	-Sends command to turn UV LED1 off 
+	-Sends command to set UV LED2 power level (PWM)
+	-Sends command to turn UV LED2 on
+	-Sends command to turn UV LED2 off 
+	
+---------------------------------------------------------------	
+MSP430 responsibilities:
+
+	-Respond to trigger pulse by firing interrupt, interrupt triggers sensor measurements
+	-Respond to read command by setting I2C Tx buffer with 32-bit float values
