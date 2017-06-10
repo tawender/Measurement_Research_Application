@@ -16,6 +16,10 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolb
 from matplotlib.figure import Figure
 import matplotlib.animation as an
 
+
+#list of which GPIO ports are used as fixture selection lines
+fixture_GPIO_ports = [4,17,22,5,6,13]
+
 import platform
 if platform.system() == 'Windows':
     pass
@@ -35,11 +39,8 @@ else:
     import pigpio
 
 
-#list of which GPIO ports are used as fixture selection lines
-fixture_GPIO_ports = [4,17,22,5,6,13]
-
 #screen layout
-num_MFCs = 20
+num_MFCs = 6
 num_MFC_displays = 2
 num_test_conditions = 20
 num_sensors_on_chip = 22
@@ -83,12 +84,12 @@ class App:
         self.tab1_frame = Frame(self.tabs)
         self.tab2_frame = Frame(self.tabs)
 
-        self.create_fixture_select_section()
+#        self.create_fixture_select_section()
         self.create_test_configuration_section()
         self.create_fixture_monitoring_section()
         self.create_monitor_control_section()
         self.create_mfc_displays()
-        self.create_exit_button()
+#        self.create_exit_button()
 
         self.tabs.add(self.tab1_frame,text='Fixture Control')
         self.tabs.add(self.tab2_frame,text='Test Condition Setup')
@@ -119,7 +120,7 @@ class App:
         self.onUpdate()
 
         self.root.title("NEA Sensor Research")
-        self.root.geometry('1300x850')
+        self.root.geometry('1300x950')
         self.root.mainloop()
 
     def create_test_configuration_section(self):
@@ -194,35 +195,51 @@ class App:
         				value=portNum).grid(sticky=W)
 
     def create_fixture_monitoring_section(self):
-		#create chip fixture monitor section
-        self.chip_fixture_monitor_frame = LabelFrame(self.tab1_frame,text="No Test Fixture Selected",padx=10,pady=10)
-        self.chip_fixture_monitor_frame.grid(row=0,rowspan=2,column=0,padx=10,pady=10,sticky=N)
 
         PHT_sensor_font = tkFont.Font(family="Helvetica",size=11)
-        Label(self.chip_fixture_monitor_frame,text="Temperature:",font=PHT_sensor_font).grid(row=0,column=0,columnspan=3,sticky=E)
+
+        self.chip_fixture_monitor_frame = LabelFrame(self.tab1_frame,text="Test Fixture Measurements",padx=10,pady=10)
+        self.chip_fixture_monitor_frame.grid(row=0,rowspan=2,column=0,padx=10,pady=10,sticky=N)
+
+        #fixture selection drop down box
+        Label(self.chip_fixture_monitor_frame,text="Selected Fixture:",font=PHT_sensor_font).grid(row=5,column=0,columnspan=3,sticky=E)
+        self.connected_fixtures = ['ID 0x01','ID 0x02','ID 0x03','ID 0x04','ID 0x05','ID 0x06']
+        self.fixture_selected = StringVar()
+        self.fixture_selected.set(self.connected_fixtures[0])
+        self.fixture_popup_menu = ttk.OptionMenu(self.chip_fixture_monitor_frame,
+                                                self.fixture_selected,
+                                                self.connected_fixtures[0],
+                                                *self.connected_fixtures)
+        self.fixture_popup_menu.grid(row=5,column=3,columnspan=2,sticky=W)
+        ttk.Separator(self.chip_fixture_monitor_frame,orient='horizontal').grid(row=7,column=0,columnspan=5,sticky='ew',pady=5)
+
+        #temperature, humidity, pressure readings
+        Label(self.chip_fixture_monitor_frame,text="Temperature:",font=PHT_sensor_font).grid(row=10,column=0,columnspan=3,sticky=E)
         self.BME280_Temp = Label(self.chip_fixture_monitor_frame,text="N/A",font=PHT_sensor_font,borderwidth=2,relief='sunken',width=6)
-        self.BME280_Temp.grid(row=0,column=3)
-        Label(self.chip_fixture_monitor_frame,text="*C",font=PHT_sensor_font).grid(row=0,column=4,sticky=W)
-        Label(self.chip_fixture_monitor_frame,text="Humidity:",font=PHT_sensor_font).grid(row=1,column=0,columnspan=3,sticky=E)
+        self.BME280_Temp.grid(row=10,column=3)
+        Label(self.chip_fixture_monitor_frame,text="*C",font=PHT_sensor_font).grid(row=10,column=4,sticky=W)
+        Label(self.chip_fixture_monitor_frame,text="Humidity:",font=PHT_sensor_font).grid(row=11,column=0,columnspan=3,sticky=E)
         self.BME280_Hum = Label(self.chip_fixture_monitor_frame,text="N/A",font=PHT_sensor_font,borderwidth=2,relief='sunken',width=6)
-        self.BME280_Hum.grid(row=1,column=3)
-        Label(self.chip_fixture_monitor_frame,text="%RH",font=PHT_sensor_font).grid(row=1,column=4,sticky=W)
-        Label(self.chip_fixture_monitor_frame,text="Pressure:",font=PHT_sensor_font).grid(row=2,column=0,columnspan=3,sticky=E)
+        self.BME280_Hum.grid(row=11,column=3)
+        Label(self.chip_fixture_monitor_frame,text="%RH",font=PHT_sensor_font).grid(row=11,column=4,sticky=W)
+        Label(self.chip_fixture_monitor_frame,text="Pressure:",font=PHT_sensor_font).grid(row=12,column=0,columnspan=3,sticky=E)
         self.BME280_Pres = Label(self.chip_fixture_monitor_frame,text="N/A",font=PHT_sensor_font,borderwidth=2,relief='sunken',width=6)
-        self.BME280_Pres.grid(row=2,column=3)
-        Label(self.chip_fixture_monitor_frame,text="Pa",font=PHT_sensor_font).grid(row=2,column=4,sticky=W)
-        ttk.Separator(self.chip_fixture_monitor_frame,orient='horizontal').grid(row=3,column=0,columnspan=5,sticky='ew',pady=5)
-        Label(self.chip_fixture_monitor_frame,text="Gas Sensor Readings (Kohms)").grid(row=4,column=0,columnspan=5,pady=5)
+        self.BME280_Pres.grid(row=12,column=3)
+        Label(self.chip_fixture_monitor_frame,text="Pa",font=PHT_sensor_font).grid(row=12,column=4,sticky=W)
+        ttk.Separator(self.chip_fixture_monitor_frame,orient='horizontal').grid(row=13,column=0,columnspan=5,sticky='ew',pady=5)
+
+        #individual sensor readings
+        Label(self.chip_fixture_monitor_frame,text="Gas Sensor Readings (Kohms)").grid(row=14,column=0,columnspan=5,pady=1)
 
         self.sensor_readouts = []
         self.sensor_checkboxes = []
         for sensor in range(num_sensors_on_chip):
             cb = Checkbutton(self.chip_fixture_monitor_frame)
-            cb.grid(row=5+sensor,column=0)
+            cb.grid(row=15+sensor,column=0)
             self.sensor_checkboxes.append(cb)
-            Label(self.chip_fixture_monitor_frame,text="%2d"%(sensor+1)).grid(row=5+sensor,column=1,sticky=E)
+            Label(self.chip_fixture_monitor_frame,text="%2d"%(sensor+1)).grid(row=15+sensor,column=1,sticky=E)
             l=Label(self.chip_fixture_monitor_frame,text="5.12",borderwidth=2,relief='sunken',width=5)
-            l.grid(row=5+sensor,column=2)
+            l.grid(row=15+sensor,column=2)
             self.sensor_readouts.append(l)
 
     def create_monitor_control_section(self):
@@ -230,15 +247,15 @@ class App:
         self.monitor_controls_frame.grid(row=2,column=0,padx=10,pady=10,sticky=N)
 
         self.monitor_start_button = Button(self.monitor_controls_frame,text="Start",command=self.start_monitor,
-                                                                                                        height=1,width=5).grid(row=0,column=0)
+                                                                                                        height=1,width=8).grid(row=0,column=0)
         self.monitor_stop_button = Button(self.monitor_controls_frame,text="Stop",command=self.start_monitor,
-                                                                                                        height=1,width=5).grid(row=0,column=1)
+                                                                                                        height=1,width=8).grid(row=0,column=1)
         self.monitor_pause_button = Button(self.monitor_controls_frame,text="Pause",command=self.start_monitor,
-                                                                                                        height=1,width=5).grid(row=0,column=2)
+                                                                                                        height=1,width=8).grid(row=0,column=2)
 
     def create_mfc_displays(self):
         self.mfc_monitors_frame = LabelFrame(self.tab1_frame,text="MFC Monitors",padx=3,pady=3)
-        self.mfc_monitors_frame.grid(row=0,column=2,padx=10,pady=10,sticky=N)
+        self.mfc_monitors_frame.grid(row=0,column=1,columnspan=3,padx=10,pady=10,sticky=NW)
 
         small_mfc_font = tkFont.Font(family="Helvetica",size=9)
         big_mfc_font = tkFont.Font(family="Helvetica",size=20)
@@ -313,7 +330,7 @@ class App:
 
     def create_plot(self):
 
-        self.fig = Figure(figsize=(10,5), dpi=100)
+        self.fig = Figure(figsize=(10,6), dpi=100)
         self.fig.suptitle("Sensor Resistance")
         self.ax = self.fig.add_subplot(111)
         self.t_line, = self.ax.plot(self.sampleTimes,self.temperatures,self.t_color+'-')
