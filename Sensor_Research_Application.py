@@ -120,7 +120,7 @@ class App:
         self.onUpdate()
 
         self.root.title("NEA Sensor Research")
-        self.root.geometry('1300x950')
+        self.root.geometry('1350x950')
         self.root.mainloop()
 
     def create_test_configuration_section(self):
