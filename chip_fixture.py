@@ -20,7 +20,7 @@ class ChipFixture(object):
 
         list_of_bytes = bus.read_i2c_block_data(self.i2c_addr,0x50+sensor_num,4)
 
-        return bytesToFloat(list_of_bytes)
+        return self.bytesToFloat(list_of_bytes)
 
     def bytesToFloat(self, l):
         """converts a list of 4 bytes to a 32-bit floating point value
