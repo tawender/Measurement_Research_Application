@@ -25,7 +25,7 @@ class ChipFixture(object):
         if ((sensor_num < 1) or (sensor_num > 44)):
             sensor_num = 1 #default if out of range
 
-        list_of_bytes = bus.read_i2c_block_data(self.i2c_addr,READ_SENSOR_COMMAND_BASE+sensor_num,4)
+        list_of_bytes = bus.read_i2c_block_data(self.i2c_addr,self.READ_SENSOR_COMMAND_BASE+sensor_num,4)
 
         return self.bytesToFloat(list_of_bytes)
 
@@ -37,7 +37,8 @@ class ChipFixture(object):
         """
         if ( (numSensors < 1) or (numSensors > 44) ):
             numSensors = 25
-        list_of_bytes = bus.read_i2c_block_data(self.i2c_addr,0x50,NUM_SENSORS*NUM_SENSOR_BYTES)
+        list_of_bytes = bus.read_i2c_block_data(self.i2c_addr,self.READ_ALL_SENSORS_COMMAND,
+                                                        numSensors*self.NUM_SENSOR_BYTES)
         if _print: print list_of_bytes
 
         float_results = []
@@ -59,17 +60,17 @@ class ChipFixture(object):
     def readTemperature(self):
         """sends command to read temperature obtained from BME280 sensor
         """
-        list_of_bytes = bus.read_i2c_block_data(self.i2c_addr,READ_TEMP_COMMAND,4)
+        list_of_bytes = bus.read_i2c_block_data(self.i2c_addr,self.READ_TEMP_COMMAND,4)
 
     def readHumidity(self):
         """sends command to read temperature obtained from BME280 sensor
         """
-        list_of_bytes = bus.read_i2c_block_data(self.i2c_addr,READ_HUMIDITY_COMMAND,4)
+        list_of_bytes = bus.read_i2c_block_data(self.i2c_addr,self.READ_HUMIDITY_COMMAND,4)
 
     def readPressure(self):
         """sends command to read temperature obtained from BME280 sensor
         """
-        list_of_bytes = bus.read_i2c_block_data(self.i2c_addr,READ_PRESSURE_COMMAND,4)
+        list_of_bytes = bus.read_i2c_block_data(self.i2c_addr,self.READ_PRESSURE_COMMAND,4)
 
 
     def bytesToFloat(self, l):
