@@ -20,22 +20,18 @@ import matplotlib.animation as an
 #list of which GPIO ports are used as fixture selection lines
 fixture_GPIO_ports = [4,17,22,5,6,13]
 
+GPIO_TRIGGER_CHANNEL = 23
+
 import platform
 if platform.system() == 'Windows':
     pass
-#    import os
-#    cwd = os.getcwd()
-#    ModulePath = cwd + "/WinLib"
-#    sys.path.append(ModulePath)
-#    import LaunchpadSPI as spidev
 else:
-    # raspberry pi SPI communication module
-#    import spidev
-    # raspberry pi input pin setup
     import RPi.GPIO as GPIO
-    #setup GPIO for selecting a test fixture to monitor
     GPIO.setmode(GPIO.BCM)
-    GPIO.setup(fixture_GPIO_ports, GPIO.OUT, initial=GPIO.HIGH)
+    
+    GPIO.setup(GPIO_TRIGGER_CHANNEL,GPIO.OUT)
+    GPIO.output(GPIO_TRIGGER_CHANNEL,0)
+    
     import pigpio
 
 
@@ -83,13 +79,13 @@ class App:
         self.tabs.grid(row=0,column=0,padx=10,pady=10)
         self.tab1_frame = Frame(self.tabs)
         self.tab2_frame = Frame(self.tabs)
+	
+	self.read_config_file()
 
-#        self.create_fixture_select_section()
         self.create_test_configuration_section()
         self.create_fixture_monitoring_section()
         self.create_monitor_control_section()
         self.create_mfc_displays()
-#        self.create_exit_button()
 
         self.tabs.add(self.tab1_frame,text='Fixture Control')
         self.tabs.add(self.tab2_frame,text='Test Condition Setup')
@@ -122,6 +118,21 @@ class App:
         self.root.title("NEA Sensor Research")
         self.root.geometry('1350x950')
         self.root.mainloop()
+
+    def read_config_file(self):
+        self.config_file_name = "settings.cfg"
+        self.c_file = open(self.config_file_name, 'r')
+        self.config_file = ConfigParser()
+        self.config_file.readfp(self.c_file)
+
+	self.MFC_com_port = self.config_file.get('MFC Controls','MFC COM port')
+	self.MFC_ids = self.config_file.get('MFC Controls','MFC IDS').split(',')
+	self.MFC_gasses = self.config_file.get('MFC Controls','MFC gasses').split(',')
+	
+        self.sample_interval_msec = int(self.config_file.get('Measurement Controls','sample interval msec'))
+	
+        self.plot_span_seconds = int(self.config_file.get('Plot Controls','scroll seconds'))
+        self.scroll_checkbox_tmp = self.config_file.getboolean('Plot Controls','scrolling enabled')
 
     def create_test_configuration_section(self):
         mfc_control_frame = LabelFrame(self.tab2_frame,text="Test Configuration")
@@ -203,8 +214,8 @@ class App:
 
         #fixture selection drop down box
         Label(self.chip_fixture_monitor_frame,text="Selected Fixture:",font=PHT_sensor_font).grid(row=5,column=0,columnspan=3,sticky=E)
-        self.connected_fixtures = ['ID 0x01','ID 0x02','ID 0x03','ID 0x04','ID 0x05','ID 0x06']
         self.fixture_selected = StringVar()
+	self.connected_fixtures = [
         self.fixture_selected.set(self.connected_fixtures[0])
         self.fixture_popup_menu = ttk.OptionMenu(self.chip_fixture_monitor_frame,
                                                 self.fixture_selected,
@@ -247,11 +258,11 @@ class App:
         self.monitor_controls_frame.grid(row=2,column=0,padx=10,pady=10,sticky=N)
 
         self.monitor_start_button = Button(self.monitor_controls_frame,text="Start",command=self.start_monitor,
-                                                                                                        height=1,width=8).grid(row=0,column=0)
+                                                                                                        height=1,width=7).grid(row=0,column=0)
         self.monitor_stop_button = Button(self.monitor_controls_frame,text="Stop",command=self.start_monitor,
-                                                                                                        height=1,width=8).grid(row=0,column=1)
+                                                                                                        height=1,width=7).grid(row=0,column=1)
         self.monitor_pause_button = Button(self.monitor_controls_frame,text="Pause",command=self.start_monitor,
-                                                                                                        height=1,width=8).grid(row=0,column=2)
+                                                                                                        height=1,width=7).grid(row=0,column=2)
 
     def create_mfc_displays(self):
         self.mfc_monitors_frame = LabelFrame(self.tab1_frame,text="MFC Monitors",padx=3,pady=3)
@@ -351,7 +362,7 @@ class App:
 
 
     def animate(self,i):
-        if self.monitor_state == 'running':
+        if False:
             self.read_BME280()
 
             self.t_line.set_data(self.sampleTimes,self.temperatures)
@@ -377,13 +388,9 @@ class App:
             else:
                 self.ax.set_xlim(0,INITIAL_XSPAN_SEC)
 
-
-
-    #-----------------------------------------------------------
-    #----------------function definitions-----------------------
     def onUpdate(self):
-        if self.fixture_selected:
-                self.readBME280()
+        if self.monitor_state == 'running':
+                self.read_fixtures()
 
         if platform.system() == 'Linux':
             for monitor in self.mfc_monitors:
@@ -401,7 +408,13 @@ class App:
         return (t,p,h)
 
     def start_monitor(self):
-        pass
+        self.monitor_state = 'running'
+	
+    def stop_monitor(self):
+	self.monitor_state = 'stopped'
+	
+    def pause_monitor(self):
+	self.monitor_state = 'paused'
 
 
     def select_fixture(self):

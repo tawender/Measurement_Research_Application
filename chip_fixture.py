@@ -1,4 +1,5 @@
 import smbus
+import struct
 
 
 class ChipFixture(object):
