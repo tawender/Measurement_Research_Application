@@ -15,17 +15,16 @@ matplotlib.use("TkAgg")
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2TkAgg
 from matplotlib.figure import Figure
 import matplotlib.animation as an
+import chip_fixture
 
-
-#list of which GPIO ports are used as fixture selection lines
-fixture_GPIO_ports = [4,17,22,5,6,13]
+debug=True
 
 GPIO_TRIGGER_CHANNEL = 23
 
 import platform
 if platform.system() == 'Windows':
     pass
-else:
+elif platform.system() == 'Linux':
     import RPi.GPIO as GPIO
     GPIO.setmode(GPIO.BCM)
     
@@ -33,6 +32,8 @@ else:
     GPIO.output(GPIO_TRIGGER_CHANNEL,0)
     
     import pigpio
+    import smbus
+    bus = smbus.SMBus(1)	#I2C bus
 
 
 #screen layout
@@ -81,10 +82,11 @@ class App:
         self.tab2_frame = Frame(self.tabs)
 	
 	self.read_config_file()
+	self.search_I2C_devices()
+	self.create_test_fixture_instances()
 
         self.create_test_configuration_section()
         self.create_fixture_monitoring_section()
-        self.create_monitor_control_section()
         self.create_mfc_displays()
 
         self.tabs.add(self.tab1_frame,text='Fixture Control')
@@ -103,9 +105,6 @@ class App:
         self.t_color = 'g'
         self.create_plot()
         self.monitor_state = None
-
-
-        self.fixture_selected = False
 
         if platform.system() == 'Linux':
             self.pi = pigpio.pi()
@@ -133,6 +132,30 @@ class App:
 	
         self.plot_span_seconds = int(self.config_file.get('Plot Controls','scroll seconds'))
         self.scroll_checkbox_tmp = self.config_file.getboolean('Plot Controls','scrolling enabled')
+	
+        #self.fixture_addresses = self.config_file.get('Connected Fixtures','I2C addresses').split(',')
+	
+    def search_I2C_devices(self):
+	self.fixture_addresses = []
+	self.fixture_addr_strings = []
+	for id in range(128):
+	    try:
+		bus.write_quick(id)
+		self.fixture_addresses.append(id)
+		self.fixture_addr_strings.append("ID: %#x"%(id))
+	    except:
+		pass
+		
+	if len(self.fixture_addresses) == 0:
+	    self.fixture_addr_strings.append("None")
+	    
+	if debug: print "detected i2c fixture addresses: ",self.fixture_addresses
+	if debug: print "fixture address strings: ",self.fixture_addr_strings
+	    
+    def create_test_fixture_instances(self):
+	self.i2c_test_fixtures = []
+	for id in self.fixture_addresses:
+	    self.i2c_test_fixtures.append(chip_fixture.ChipFixture(id))
 
     def create_test_configuration_section(self):
         mfc_control_frame = LabelFrame(self.tab2_frame,text="Test Configuration")
@@ -177,34 +200,6 @@ class App:
                 e.grid(row=2+test_condition,column=5+mfc_num*4,sticky=W)
                 test_condition_settings.append(e)
 
-    def create_fixture_select_section(self):
-
-        #create a list of tuples used to build radio buttons for fixture selection
-        i = 1
-        self.fixture_selections = []
-        for port in fixture_GPIO_ports:
-        	self.fixture_selections.append(("fixture #%d"%(i),port))
-        	i = i+1
-        self.fixture_selections.append(("all off",0))
-
-        #variable shared by all fixture selection radio buttons
-        self.fixture_selection = IntVar()
-        #initialize to 0 for no fixture currently selected
-        self.fixture_selection.set(0)
-
-        #create the border grouping all fixture selection radio buttons
-        fixture_selection_border = LabelFrame(self.tab1_frame,text="Test Fixture Selection",padx=3,pady=3)
-        fixture_selection_border.grid(row=0,column=1,padx=10,pady=10,sticky=N)
-
-        #create fixture selection radio buttons
-        for lbl, portNum in self.fixture_selections:
-        	Radiobutton(fixture_selection_border,
-        				text=lbl,
-        				padx=5,
-        				variable=self.fixture_selection,
-        				command=self.select_fixture,
-        				value=portNum).grid(sticky=W)
-
     def create_fixture_monitoring_section(self):
 
         PHT_sensor_font = tkFont.Font(family="Helvetica",size=11)
@@ -214,13 +209,12 @@ class App:
 
         #fixture selection drop down box
         Label(self.chip_fixture_monitor_frame,text="Selected Fixture:",font=PHT_sensor_font).grid(row=5,column=0,columnspan=3,sticky=E)
-        self.fixture_selected = StringVar()
-	self.connected_fixtures = [
-        self.fixture_selected.set(self.connected_fixtures[0])
+        self.selected_fixture_id = StringVar()
+        self.selected_fixture_id.set(self.fixture_addr_strings[0])
         self.fixture_popup_menu = ttk.OptionMenu(self.chip_fixture_monitor_frame,
-                                                self.fixture_selected,
-                                                self.connected_fixtures[0],
-                                                *self.connected_fixtures)
+                                                self.selected_fixture_id,
+                                                self.fixture_addr_strings[0],
+                                                *self.fixture_addr_strings)
         self.fixture_popup_menu.grid(row=5,column=3,columnspan=2,sticky=W)
         ttk.Separator(self.chip_fixture_monitor_frame,orient='horizontal').grid(row=7,column=0,columnspan=5,sticky='ew',pady=5)
 
@@ -252,17 +246,28 @@ class App:
             l=Label(self.chip_fixture_monitor_frame,text="5.12",borderwidth=2,relief='sunken',width=5)
             l.grid(row=15+sensor,column=2)
             self.sensor_readouts.append(l)
-
-    def create_monitor_control_section(self):
-        self.monitor_controls_frame = LabelFrame(self.tab1_frame,text="Monitor Controls",padx=10,pady=10)
-        self.monitor_controls_frame.grid(row=2,column=0,padx=10,pady=10,sticky=N)
-
+	
+        self.monitor_controls_frame = LabelFrame(self.chip_fixture_monitor_frame,borderwidth=0,padx=10,pady=10)
+        self.monitor_controls_frame.grid(row=50,column=0,columnspan=5,padx=10,pady=10,sticky=N)
+	button_width = 6
         self.monitor_start_button = Button(self.monitor_controls_frame,text="Start",command=self.start_monitor,
-                                                                                                        height=1,width=7).grid(row=0,column=0)
-        self.monitor_stop_button = Button(self.monitor_controls_frame,text="Stop",command=self.start_monitor,
-                                                                                                        height=1,width=7).grid(row=0,column=1)
-        self.monitor_pause_button = Button(self.monitor_controls_frame,text="Pause",command=self.start_monitor,
-                                                                                                        height=1,width=7).grid(row=0,column=2)
+								    height=1,width=button_width).grid(row=0,column=0)
+        self.monitor_stop_button = Button(self.monitor_controls_frame,text="Stop",command=self.stop_monitor,
+                                                                    height=1,width=button_width).grid(row=0,column=1)
+        self.monitor_pause_button = Button(self.monitor_controls_frame,text="Pause",command=self.pause_monitor,
+                                                                    height=1,width=button_width).grid(row=0,column=2)
+
+    #def create_monitor_control_section(self):
+        #self.monitor_controls_frame = LabelFrame(self.tab1_frame,text="Monitor Controls",padx=10,pady=10)
+        #self.monitor_controls_frame.grid(row=2,column=0,padx=10,pady=10,sticky=N)
+
+	#button_width = 6
+        #self.monitor_start_button = Button(self.monitor_controls_frame,text="Start",command=self.start_monitor,
+								    #height=1,width=button_width).grid(row=0,column=0)
+        #self.monitor_stop_button = Button(self.monitor_controls_frame,text="Stop",command=self.stop_monitor,
+                                                                    #height=1,width=button_width).grid(row=0,column=1)
+        #self.monitor_pause_button = Button(self.monitor_controls_frame,text="Pause",command=self.pause_monitor,
+                                                                    #height=1,width=button_width).grid(row=0,column=2)
 
     def create_mfc_displays(self):
         self.mfc_monitors_frame = LabelFrame(self.tab1_frame,text="MFC Monitors",padx=3,pady=3)
@@ -362,11 +367,10 @@ class App:
 
 
     def animate(self,i):
-        if False:
-            self.read_BME280()
-
+#        if self.monitor_state == 'running':
+	if False:
             self.t_line.set_data(self.sampleTimes,self.temperatures)
-
+	    print 'got here'
             self.update_plot()
 
             return self.t_line,
@@ -390,7 +394,10 @@ class App:
 
     def onUpdate(self):
         if self.monitor_state == 'running':
-                self.read_fixtures()
+	    data = self.read_fixture_measurements()
+	    self.BME280_Temp['text'] = "%.2f"%(data[0])
+	    self.BME280_Hum['text'] = "%.2f"%(data[1])
+	    self.BME280_Pres['text'] = "%.0f"%(data[2])
 
         if platform.system() == 'Linux':
             for monitor in self.mfc_monitors:
@@ -398,14 +405,6 @@ class App:
 
 
         self.root.after(1000,self.onUpdate)
-
-    def readBME280(self):
-        t, p, h = self.BME280sensor.read_data()
-        self.BME280_Temp['text'] = "%.2f"%(t)
-        self.BME280_Hum['text'] = "%.2f"%(h)
-        self.BME280_Pres['text'] = "%.0f"%(p)
-
-        return (t,p,h)
 
     def start_monitor(self):
         self.monitor_state = 'running'
@@ -416,44 +415,25 @@ class App:
     def pause_monitor(self):
 	self.monitor_state = 'paused'
 
-
     def select_fixture(self):
+	pass
 
-        #testing previous selection state to handle BME280 sensor switching
-        if self.fixture_selected:
-            self.BME280sensor.cancel()
-
-        #find GPIO port associated with selected radio button
-        fx = self.fixture_selection.get()
-
-    	if fx:
-            self.fixture_selected = True
-        else:
-            self.fixture_selected = False
-
-    	#find index of radio button selected
-    	radio_index = self.fixture_selections.index([tup for tup in self.fixture_selections if fx in tup][0])
-
-    	#set all GPIO ports high to disable
-    	for port in fixture_GPIO_ports:
-            GPIO.output(port,GPIO.HIGH)
-
-    	#test for valid fixture selection or all fixtures off
-    	if self.fixture_selected:
-            GPIO.output(fx,GPIO.LOW)
-            self.chip_fixture_monitor_frame.configure(text="Fixture #%d Readings"%(radio_index+1))
-            time.sleep(0.2)
-            self.BME280sensor = BME_280.sensor(self.pi)
-    	else:
-			self.chip_fixture_monitor_frame.configure(text="No Test Fixture Selected")
-			self.BME280_Temp['text'] = "N/A"
-			self.BME280_Hum['text'] = "N/A"
-			self.BME280_Pres['text'] = "N/A"
-
-
+    def read_fixture_measurements(self):
+	self.send_measurement_trigger()
+	
+	fixture_index = self.fixture_addr_strings.index(self.selected_fixture_id.get())
+	
+	return self.i2c_test_fixtures[fixture_index].readAll()
+	
+	
+    def send_measurement_trigger(self):
+	GPIO.output(GPIO_TRIGGER_CHANNEL,1)
+	time.sleep(0.1)
+	GPIO.output(GPIO_TRIGGER_CHANNEL,0)
+	
     def onExit(self):
-        #self.BME280sensor.cancel()
         if platform.system() == 'Linux':
+	    print 'exiting...'
             GPIO.cleanup()
             self.pi.stop()
             for mfc in self.mfc_monitors:
