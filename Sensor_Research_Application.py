@@ -16,6 +16,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolb
 from matplotlib.figure import Figure
 import matplotlib.animation as an
 import chip_fixture
+import serial
 
 debug=True
 
@@ -37,8 +38,8 @@ elif platform.system() == 'Linux':
 
 
 #screen layout
-num_MFCs = 6
-num_MFC_displays = 2
+#num_MFCs = 6
+#num_MFC_displays = 2
 num_test_conditions = 20
 num_sensors_on_chip = 22
 
@@ -65,6 +66,9 @@ class mfc_display:
         self.volumetric_flow['text'] = "%.2f"%(readings['volumetric_flow'])
         self.gas['text'] = "%s"%(readings['gas'])
         self.pressure['text'] = "%.2f"%(readings['pressure'])
+	
+    def get_gas(self):
+	return self.gas['text']
 
     def close(self):
         self.flowController.close()
@@ -83,11 +87,13 @@ class App:
 	
 	self.read_config_file()
 	self.search_I2C_devices()
-	self.create_test_fixture_instances()
+	self.create_chip_fixture_instances()
+	self.search_mfc_devices()
+	self.create_mfc_instances()
 
+        self.create_mfc_displays()
         self.create_test_configuration_section()
         self.create_fixture_monitoring_section()
-        self.create_mfc_displays()
 
         self.tabs.add(self.tab1_frame,text='Fixture Control')
         self.tabs.add(self.tab2_frame,text='Test Condition Setup')
@@ -125,8 +131,7 @@ class App:
         self.config_file.readfp(self.c_file)
 
 	self.MFC_com_port = self.config_file.get('MFC Controls','MFC COM port')
-	self.MFC_ids = self.config_file.get('MFC Controls','MFC IDS').split(',')
-	self.MFC_gasses = self.config_file.get('MFC Controls','MFC gasses').split(',')
+	self.MFC_baud_rate = int(self.config_file.get('MFC Controls','MFC baud rate'))
 	
         self.sample_interval_msec = int(self.config_file.get('Measurement Controls','sample interval msec'))
 	
@@ -136,6 +141,7 @@ class App:
         #self.fixture_addresses = self.config_file.get('Connected Fixtures','I2C addresses').split(',')
 	
     def search_I2C_devices(self):
+	if debug: print "Searching for connected I2C devices..."
 	self.fixture_addresses = []
 	self.fixture_addr_strings = []
 	for id in range(128):
@@ -149,37 +155,104 @@ class App:
 	if len(self.fixture_addresses) == 0:
 	    self.fixture_addr_strings.append("None")
 	    
-	if debug: print "detected i2c fixture addresses: ",self.fixture_addresses
-	if debug: print "fixture address strings: ",self.fixture_addr_strings
+	if debug: print "Found I2C device addresses: ",self.fixture_addr_strings
 	    
-    def create_test_fixture_instances(self):
+    def create_chip_fixture_instances(self):
 	self.i2c_test_fixtures = []
 	for id in self.fixture_addresses:
-	    self.i2c_test_fixtures.append(chip_fixture.ChipFixture(id))
+	    self.i2c_test_fixtures.append(chip_fixture.ChipFixture(id,bus))
+	    
+    def search_mfc_devices(self):
+	if debug: print "Searching for MFCs connected..."
+	ser = serial.Serial(self.MFC_com_port, self.MFC_baud_rate, timeout=0.1)
+	self.found_MFC_IDs = []
+	
+	#scan ascii 'A' to ascii 'Z' for connected MFCs
+	for id in range(65,91,1):
+	    ser.flushInput()
+	    ser.flushOutput()
+	    ser.write("%s\r"%(chr(id)))
+	    time.sleep(0.1)
+	    ret=ser.read(1)
+	    if ret==chr(id):
+		self.found_MFC_IDs.append(chr(id))
+		
+	self.num_connected_MFCs = len(self.found_MFC_IDs)
+	if debug: print "Found MFCs: ",self.found_MFC_IDs
+		
+    def create_mfc_instances(self):
+	if platform.system() == 'Linux':
+	    self.connected_MFCs = []
+	    
+	    for mfc_id in self.found_MFC_IDs:
+		mfc = alicat.FlowController(address=mfc_id)
+		self.connected_MFCs.append(mfc)
+
+    def create_mfc_displays(self):
+        self.mfc_monitors_frame = LabelFrame(self.tab1_frame,text="MFC Monitors",padx=3,pady=3)
+        self.mfc_monitors_frame.grid(row=0,column=1,columnspan=3,padx=10,pady=10,sticky=NW)
+
+        small_mfc_font = tkFont.Font(family="Helvetica",size=9)
+        big_mfc_font = tkFont.Font(family="Helvetica",size=20)
+        self.mfc_monitors = []
+
+        for i in range(self.num_connected_MFCs):
+            m = mfc_display()
+
+            Label(self.mfc_monitors_frame,text="PSIA",font=small_mfc_font).grid(row=0,column=4*i+0)
+            lbl=Label(self.mfc_monitors_frame,text="14.00",font=small_mfc_font)
+            lbl.grid(row=1,column=4*i+0)
+            m.pressure = lbl
+            Label(self.mfc_monitors_frame,text="*C",font=small_mfc_font).grid(row=0,column=4*i+1)
+            lbl=Label(self.mfc_monitors_frame,text="25.76",font=small_mfc_font)
+            lbl.grid(row=1,column=4*i+1,padx=8)
+            m.temperature = lbl
+            Label(self.mfc_monitors_frame,text="SETPT",font=small_mfc_font).grid(row=0,column=4*i+2)
+            lbl=Label(self.mfc_monitors_frame,text="0.0",font=small_mfc_font)
+            lbl.grid(row=1,column=4*i+2)
+            m.flow_setpoint = lbl
+            Label(self.mfc_monitors_frame,text=" ",font=small_mfc_font).grid(row=2,column=4*i+0)
+            Label(self.mfc_monitors_frame,text="SCCM",font=small_mfc_font).grid(row=3,column=4*i+2)
+            lbl=Label(self.mfc_monitors_frame,text="Air",font=small_mfc_font)
+            lbl.grid(row=4,column=4*i+2)
+            m.gas = lbl
+            lbl=Label(self.mfc_monitors_frame,text="1.3",font=big_mfc_font)
+            lbl.grid(row=3,rowspan=3,column=4*i+0,columnspan=2,sticky=NE)
+            m.mass_flow = lbl
+            Label(self.mfc_monitors_frame,text=" ",font=small_mfc_font).grid(row=5,column=4*i+0)
+            lbl=Label(self.mfc_monitors_frame,text="1.3",font=small_mfc_font)
+            lbl.grid(row=6,column=4*i+0)
+            m.volumetric_flow = lbl
+            Label(self.mfc_monitors_frame,text="CCM",font=small_mfc_font).grid(row=7,column=4*i+0)
+            lbl=Label(self.mfc_monitors_frame,text="1.2",font=small_mfc_font)
+            lbl.grid(row=6,column=4*i+1)
+            m.mass_flow2 = lbl
+            Label(self.mfc_monitors_frame,text="SCCM",font=small_mfc_font).grid(row=7,column=4*i+1)
+	    
+	    m.flowController = self.connected_MFCs[i]
+	    m.address = self.found_MFC_IDs[i]
+	    m.update_readings()
+
+            self.mfc_monitors.append(m)
+
+            if i != self.num_connected_MFCs-1:
+                ttk.Separator(self.mfc_monitors_frame,orient='vertical').grid(row=0,column=4*i+3,rowspan=7,sticky='ns',padx=10)
 
     def create_test_configuration_section(self):
         mfc_control_frame = LabelFrame(self.tab2_frame,text="Test Configuration")
         mfc_control_frame.grid(row=0,column=0,padx=10,pady=10,ipadx=5,ipady=5,columnspan=2)
 
-        mfc_checkboxes = []
-        mfc_ids = []
-        mfc_gas = []
-        for mfc_num in range(num_MFCs):
-            #checkbox to enable this MFC
-            Label(mfc_control_frame,text="enable").grid(row=0,column=3+mfc_num*4,columnspan=2,sticky=E)
-            cb = Checkbutton(mfc_control_frame)
-            cb.grid(row=0,column=5+mfc_num*4,sticky=W)
-            mfc_checkboxes.append(cb)
+        for mfc_num in range(self.num_connected_MFCs):
             #MFC ID for communication
-            Label(mfc_control_frame,text="    MFC ID").grid(row=1,column=3+mfc_num*4,sticky=E)
-            e = Entry(mfc_control_frame,width=2)
-            e.grid(row=1,column=4+mfc_num*4,sticky=W)
-            mfc_ids.append(e)
+            Label(mfc_control_frame,text="    MFC ID:").grid(row=1,column=3+mfc_num*4,sticky=E)
+            mfc_id = Label(mfc_control_frame,text=self.found_MFC_IDs[mfc_num],
+				    borderwidth=2,relief='sunken',width=2)
+            mfc_id.grid(row=1,column=4+mfc_num*4,sticky=W)
             #type of gas MFC will control
-            Label(mfc_control_frame,text="gas").grid(row=1,column=5+mfc_num*4,sticky=E)
-            e = Entry(mfc_control_frame,width=4)
-            e.grid(row=1,column=6+mfc_num*4,sticky=W)
-            mfc_gas.append(e)
+            Label(mfc_control_frame,text="gas:").grid(row=1,column=5+mfc_num*4,sticky=E)
+	    gas = Label(mfc_control_frame,text=self.mfc_monitors[mfc_num].get_gas(),
+				    borderwidth=2,relief='sunken',width=3)
+            gas.grid(row=1,column=6+mfc_num*4,sticky=W)
 
         test_condition_checkboxes = []
         test_condition_times = []
@@ -194,7 +267,7 @@ class App:
             e = Entry(mfc_control_frame,width=4)
             e.grid(row=2+test_condition,column=2,sticky=W)
             test_condition_times.append(e)
-            for mfc_num in range(num_MFCs):
+            for mfc_num in range(self.num_connected_MFCs):
                 Label(mfc_control_frame,text="scfm:").grid(row=2+test_condition,column=4+mfc_num*4,sticky=E)
                 e = Entry(mfc_control_frame,width=3)
                 e.grid(row=2+test_condition,column=5+mfc_num*4,sticky=W)
@@ -256,73 +329,6 @@ class App:
                                                                     height=1,width=button_width).grid(row=0,column=1)
         self.monitor_pause_button = Button(self.monitor_controls_frame,text="Pause",command=self.pause_monitor,
                                                                     height=1,width=button_width).grid(row=0,column=2)
-
-    #def create_monitor_control_section(self):
-        #self.monitor_controls_frame = LabelFrame(self.tab1_frame,text="Monitor Controls",padx=10,pady=10)
-        #self.monitor_controls_frame.grid(row=2,column=0,padx=10,pady=10,sticky=N)
-
-	#button_width = 6
-        #self.monitor_start_button = Button(self.monitor_controls_frame,text="Start",command=self.start_monitor,
-								    #height=1,width=button_width).grid(row=0,column=0)
-        #self.monitor_stop_button = Button(self.monitor_controls_frame,text="Stop",command=self.stop_monitor,
-                                                                    #height=1,width=button_width).grid(row=0,column=1)
-        #self.monitor_pause_button = Button(self.monitor_controls_frame,text="Pause",command=self.pause_monitor,
-                                                                    #height=1,width=button_width).grid(row=0,column=2)
-
-    def create_mfc_displays(self):
-        self.mfc_monitors_frame = LabelFrame(self.tab1_frame,text="MFC Monitors",padx=3,pady=3)
-        self.mfc_monitors_frame.grid(row=0,column=1,columnspan=3,padx=10,pady=10,sticky=NW)
-
-        small_mfc_font = tkFont.Font(family="Helvetica",size=9)
-        big_mfc_font = tkFont.Font(family="Helvetica",size=20)
-        self.mfc_monitors = []
-
-        for i in range(num_MFC_displays):
-            m = mfc_display()
-
-            Label(self.mfc_monitors_frame,text="PSIA",font=small_mfc_font).grid(row=0,column=4*i+0)
-            lbl=Label(self.mfc_monitors_frame,text="14.00",font=small_mfc_font)
-            lbl.grid(row=1,column=4*i+0)
-            m.pressure = lbl
-            Label(self.mfc_monitors_frame,text="*C",font=small_mfc_font).grid(row=0,column=4*i+1)
-            lbl=Label(self.mfc_monitors_frame,text="25.76",font=small_mfc_font)
-            lbl.grid(row=1,column=4*i+1,padx=8)
-            m.temperature = lbl
-            Label(self.mfc_monitors_frame,text="SETPT",font=small_mfc_font).grid(row=0,column=4*i+2)
-            lbl=Label(self.mfc_monitors_frame,text="0.0",font=small_mfc_font)
-            lbl.grid(row=1,column=4*i+2)
-            m.flow_setpoint = lbl
-            Label(self.mfc_monitors_frame,text=" ",font=small_mfc_font).grid(row=2,column=4*i+0)
-            Label(self.mfc_monitors_frame,text="SCCM",font=small_mfc_font).grid(row=3,column=4*i+2)
-            lbl=Label(self.mfc_monitors_frame,text="Air",font=small_mfc_font)
-            lbl.grid(row=4,column=4*i+2)
-            m.gas = lbl
-            lbl=Label(self.mfc_monitors_frame,text="1.3",font=big_mfc_font)
-            lbl.grid(row=3,rowspan=3,column=4*i+0,columnspan=2,sticky=NE)
-            m.mass_flow = lbl
-            Label(self.mfc_monitors_frame,text=" ",font=small_mfc_font).grid(row=5,column=4*i+0)
-            lbl=Label(self.mfc_monitors_frame,text="1.3",font=small_mfc_font)
-            lbl.grid(row=6,column=4*i+0)
-            m.volumetric_flow = lbl
-            Label(self.mfc_monitors_frame,text="CCM",font=small_mfc_font).grid(row=7,column=4*i+0)
-            lbl=Label(self.mfc_monitors_frame,text="1.2",font=small_mfc_font)
-            lbl.grid(row=6,column=4*i+1)
-            m.mass_flow2 = lbl
-            Label(self.mfc_monitors_frame,text="SCCM",font=small_mfc_font).grid(row=7,column=4*i+1)
-
-            self.mfc_monitors.append(m)
-
-            if i != num_MFC_displays-1:
-                ttk.Separator(self.mfc_monitors_frame,orient='vertical').grid(row=0,column=4*i+3,rowspan=7,sticky='ns',padx=10)
-
-        if platform.system() == 'Linux':
-            self.mfc_B = alicat.FlowController(address='B')
-            self.mfc_monitors[0].flowController = self.mfc_B
-            self.mfc_monitors[0].address = 'B'
-
-            self.mfc_C = alicat.FlowController(address='C')
-            self.mfc_monitors[1].flowController = self.mfc_C
-            self.mfc_monitors[1].address = 'C'
 
     def create_exit_button(self):
         exitButton = Button(self.mainPanel, text="Exit", command=self.onExit, height=2,width=10).grid(pady=10)

@@ -1,4 +1,3 @@
-import smbus
 import struct
 
 
@@ -10,8 +9,8 @@ class ChipFixture(object):
     READ_PRESSURE_COMMAND = 0x50
     START_MEASUREMENTS_COMMAND = 0x81
 
-    def __init__(self,i2c_address,busNum=1):
-        self.bus = smbus.SMBus(busNum)
+    def __init__(self,i2c_address,bus):
+        self.bus = bus
         if ((i2c_address >= 1) and (i2c_address <= 0x7f)):
             self.i2c_addr = i2c_address
         else:
