@@ -229,6 +229,9 @@ class App:
             m.mass_flow2 = lbl
             Label(self.mfc_monitors_frame,text="SCCM",font=small_mfc_font).grid(row=7,column=4*i+1)
 	    
+            Label(self.mfc_monitors_frame,text=self.found_MFC_IDs[i],font=small_mfc_font).grid(row=6,column=4*i+2)
+            Label(self.mfc_monitors_frame,text="ID",font=small_mfc_font).grid(row=7,column=4*i+2)
+	    
 	    m.flowController = self.connected_MFCs[i]
 	    m.address = self.found_MFC_IDs[i]
 	    m.update_readings()
@@ -251,7 +254,7 @@ class App:
             #type of gas MFC will control
             Label(mfc_control_frame,text="gas:").grid(row=1,column=5+mfc_num*4,sticky=E)
 	    gas = Label(mfc_control_frame,text=self.mfc_monitors[mfc_num].get_gas(),
-				    borderwidth=2,relief='sunken',width=3)
+				    borderwidth=2,relief='sunken',width=5)
             gas.grid(row=1,column=6+mfc_num*4,sticky=W)
 
         test_condition_checkboxes = []
@@ -316,7 +319,7 @@ class App:
             cb.grid(row=15+sensor,column=0)
             self.sensor_checkboxes.append(cb)
             Label(self.chip_fixture_monitor_frame,text="%2d"%(sensor+1)).grid(row=15+sensor,column=1,sticky=E)
-            l=Label(self.chip_fixture_monitor_frame,text="5.12",borderwidth=2,relief='sunken',width=5)
+            l=Label(self.chip_fixture_monitor_frame,text="5.12",borderwidth=2,relief='sunken',width=7)
             l.grid(row=15+sensor,column=2)
             self.sensor_readouts.append(l)
 	
@@ -399,18 +402,25 @@ class App:
                 self.ax.set_xlim(0,INITIAL_XSPAN_SEC)
 
     def onUpdate(self):
-        if self.monitor_state == 'running':
-	    data = self.read_fixture_measurements()
-	    self.BME280_Temp['text'] = "%.2f"%(data[0])
-	    self.BME280_Hum['text'] = "%.2f"%(data[1])
-	    self.BME280_Pres['text'] = "%.0f"%(data[2])
-
         if platform.system() == 'Linux':
+	    
+	    if self.monitor_state == 'running':
+		data = self.read_fixture_measurements()
+		self.update_measurements_display(data)
+		
             for monitor in self.mfc_monitors:
                 monitor.update_readings()
 
-
         self.root.after(1000,self.onUpdate)
+	
+    def update_measurements_display(self,data):
+	self.BME280_Temp['text'] = "%.2f"%(data[0])
+	self.BME280_Hum['text'] = "%.2f"%(data[1])
+	self.BME280_Pres['text'] = "%.0f"%(data[2])
+	
+	for i in range(len(data)-3):
+	    self.sensor_readouts[i]['text'] = "%.1f"%(data[i+3])
+    
 
     def start_monitor(self):
         self.monitor_state = 'running'
@@ -427,14 +437,16 @@ class App:
     def read_fixture_measurements(self):
 	self.send_measurement_trigger()
 	
+	#wait for measurements to complete before reading results
+	time.sleep(0.4)
 	fixture_index = self.fixture_addr_strings.index(self.selected_fixture_id.get())
 	
-	return self.i2c_test_fixtures[fixture_index].readAll()
+	return self.i2c_test_fixtures[fixture_index].readAll(25)
 	
 	
     def send_measurement_trigger(self):
 	GPIO.output(GPIO_TRIGGER_CHANNEL,1)
-	time.sleep(0.1)
+	time.sleep(0.01)
 	GPIO.output(GPIO_TRIGGER_CHANNEL,0)
 	
     def onExit(self):
