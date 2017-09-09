@@ -17,6 +17,7 @@ from matplotlib.figure import Figure
 import matplotlib.animation as an
 import chip_fixture
 import serial
+from datetime import datetime as dt
 
 debug=True
 
@@ -102,7 +103,6 @@ class App:
 
         self.create_menu()
 
-        self.sample_interval_msec = 500
         self.plot_span_seconds = 30
         self.sampleTime = 0
         self.sampleTimes = []
@@ -110,7 +110,8 @@ class App:
         self.humidities = []
         self.t_color = 'g'
         self.create_plot()
-        self.monitor_state = None
+        self.monitor_state = 'stopped'
+	self.samples_since_write = 0
 
         if platform.system() == 'Linux':
             self.pi = pigpio.pi()
@@ -138,7 +139,10 @@ class App:
         self.plot_span_seconds = int(self.config_file.get('Plot Controls','scroll seconds'))
         self.scroll_checkbox_tmp = self.config_file.getboolean('Plot Controls','scrolling enabled')
 	
-        #self.fixture_addresses = self.config_file.get('Connected Fixtures','I2C addresses').split(',')
+        self.outDir = self.config_file.get('Output','data path')
+	self.samples_before_write = int(self.config_file.get('Output','samples before write'))
+	
+	self.num_comments = int(self.config_file.get('User Input','number of comments'))
 	
     def search_I2C_devices(self):
 	if debug: print "Searching for connected I2C devices..."
@@ -172,7 +176,7 @@ class App:
 	    ser.flushInput()
 	    ser.flushOutput()
 	    ser.write("%s\r"%(chr(id)))
-	    time.sleep(0.1)
+	    time.sleep(0.15)
 	    ret=ser.read(1)
 	    if ret==chr(id):
 		self.found_MFC_IDs.append(chr(id))
@@ -243,7 +247,7 @@ class App:
 
     def create_test_configuration_section(self):
         mfc_control_frame = LabelFrame(self.tab2_frame,text="Test Configuration")
-        mfc_control_frame.grid(row=0,column=0,padx=10,pady=10,ipadx=5,ipady=5,columnspan=2)
+        mfc_control_frame.grid(row=0,column=0,padx=10,pady=10,ipadx=5,ipady=5)
 
         for mfc_num in range(self.num_connected_MFCs):
             #MFC ID for communication
@@ -275,6 +279,24 @@ class App:
                 e = Entry(mfc_control_frame,width=3)
                 e.grid(row=2+test_condition,column=5+mfc_num*4,sticky=W)
                 test_condition_settings.append(e)
+		
+	#user input to describe chips and test conditions
+	test_description_frame = LabelFrame(self.tab2_frame,text="Test Description")
+        test_description_frame.grid(row=5,column=0,padx=10,pady=10,ipadx=15,ipady=40,sticky=W)
+	#descriptions for each test fixture
+	self.fixture_descriptions = []
+	for i in range(len(self.fixture_addresses)):
+	    Label(test_description_frame,text="Fixture "+self.fixture_addr_strings[i]).grid(row=i,column=0,sticky=W)
+	    e = Entry(test_description_frame,width=30)
+	    e.grid(row=i,column=1,sticky=W,pady=5)
+	    self.fixture_descriptions.append(e)
+	#general comments
+	self.comments = []
+	for i in range(self.num_comments):
+	    Label(test_description_frame,text="  Comment %d:"%(i+1)).grid(row=i,column=2)
+	    e = Entry(test_description_frame,width=40)
+	    e.grid(row=i,column=3,sticky=W,pady=5)
+	    self.comments.append(e)
 
     def create_fixture_monitoring_section(self):
 
@@ -326,11 +348,11 @@ class App:
         self.monitor_controls_frame = LabelFrame(self.chip_fixture_monitor_frame,borderwidth=0,padx=10,pady=10)
         self.monitor_controls_frame.grid(row=50,column=0,columnspan=5,padx=10,pady=10,sticky=N)
 	button_width = 6
-        self.monitor_start_button = Button(self.monitor_controls_frame,text="Start",command=self.start_monitor,
+        self.monitor_start_button = Button(self.monitor_controls_frame,text="Start",command=self.on_start_monitor,
 								    height=1,width=button_width).grid(row=0,column=0)
-        self.monitor_stop_button = Button(self.monitor_controls_frame,text="Stop",command=self.stop_monitor,
+        self.monitor_stop_button = Button(self.monitor_controls_frame,text="Stop",command=self.on_stop_monitor,
                                                                     height=1,width=button_width).grid(row=0,column=1)
-        self.monitor_pause_button = Button(self.monitor_controls_frame,text="Pause",command=self.pause_monitor,
+        self.monitor_pause_button = Button(self.monitor_controls_frame,text="Pause",command=self.on_pause_monitor,
                                                                     height=1,width=button_width).grid(row=0,column=2)
 
     def create_exit_button(self):
@@ -406,6 +428,12 @@ class App:
 	    
 	    if self.monitor_state == 'running':
 		data = self.read_fixture_measurements()
+		self.current_sample_number += 1
+		self.samples_since_write += 1
+		if self.samples_since_write == self.samples_before_write:
+		    self.write_samples_to_file()
+		    self.samples_since_write = 0
+		    
 		self.update_measurements_display(data)
 		
             for monitor in self.mfc_monitors:
@@ -422,17 +450,35 @@ class App:
 	    self.sensor_readouts[i]['text'] = "%.1f"%(data[i+3])
     
 
-    def start_monitor(self):
+    def on_start_monitor(self):
+	if self.monitor_state == 'stopped':
+	    self.create_new_outfile()
+	    self.current_sample_number = 0
+	    self.samples_since_write = 0
+	    
         self.monitor_state = 'running'
 	
-    def stop_monitor(self):
+    def on_stop_monitor(self):
 	self.monitor_state = 'stopped'
 	
-    def pause_monitor(self):
+    def on_pause_monitor(self):
 	self.monitor_state = 'paused'
-
-    def select_fixture(self):
+	
+    def create_new_outfile(self):
+	time_string = dt.now().strftime("%Y_%m_%d__%H_%M_%S")
+	self.outfile = open(self.outDir + "/" + time_string,'w')
+	self.outfile.write("\n Comment1:%s,Comment2:%s\n")
+	for mfc_num in range(self.num_connected_MFCs):
+	    self.outfile.write("Gas%d:%s"%(mfc_num,self.mfc_monitors[mfc_num].get_gas()))
+	    if mfc_num < self.num_connected_MFCs-1:
+		self.outfile.write(",")
+	self.outfile.write("\n")
+	self.outfile.flush()
+	
+    def write_samples_to_file(self):
 	pass
+	#for samples:
+	    #self.outfile.write("
 
     def read_fixture_measurements(self):
 	self.send_measurement_trigger()
