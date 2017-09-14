@@ -11,6 +11,8 @@ class ChipFixture(object):
     CMD_READ_HUMIDITY = 0x4F
     CMD_READ_PRESSURE = 0x50
     CMD_START_MEASUREMENTS = 0x81
+    CMD_ENABLE_AUTORANGE		= 0x1F
+    CMD_DISABLE_AUTORANGE		= 0x20
     CMD_SET_DAC1 			= 0x21
     CMD_SET_DAC2 			= 0x22
     CMD_SELECT_CONST_VOLTAGE_CIRCUIT 	= 0x27
@@ -25,6 +27,10 @@ class ChipFixture(object):
     CMD_SELECT_RBIAS2			= 0x31
     CMD_SELECT_RBIAS3			= 0x32
     CMD_SELECT_RBIAS4			= 0x33
+    
+    DUMMY_SENSORS = [1.0,1.5,2.0,2.7,3.3,3.9,4.7,5.6,6.2,6.81,7.5,
+			8.2,10.0,11.0,12.0,13.0,14.0,15.0,16.0,17.4,
+			18.0,20.0]
 
     def __init__(self,i2c_address,bus):
         self.bus = bus
@@ -84,6 +90,14 @@ class ChipFixture(object):
 	    self.sendCommand(self.CMD_SELECT_RBIAS3)
 	elif (rNum==4):
 	    self.sendCommand(self.CMD_SELECT_RBIAS4)
+
+    def enableAutorange(self):
+	"""send command to enable autorange function when constant current circuit in use"""
+	self.sendCommand(self.CMD_ENABLE_AUTORANGE)
+
+    def disableAutorange(self):
+	"""send command to disable autorange function when constant current circuit in use"""
+	self.sendCommand(self.CMD_DISABLE_AUTORANGE)
 
     def groundSensors(self):
 	"""send command to close the switch grounding one side of all sensor locations"""
@@ -213,3 +227,24 @@ class ChipFixture(object):
         """
         value = l[0] + (l[1]<<8) + (l[2]<<16) + (l[3]<<24) 
         return "{0:0{1}x}".format(value,8)
+	
+    def testAll(self,numSensorsToRead=25):
+	sensornum = 1
+	r = self.readAll(numSensorsToRead)
+	
+	print "\n***************************************************************************"
+	print "      Temp: %.2f*C  RH: %.2f%%  Pres: %.0fPa"%(
+		    r[0],r[1],r[2])
+	
+	numRows = (numSensorsToRead-3)/2
+	for i in range(numRows):
+	    print "  Sensor%2d: %.0fohms  err: %4.1f%%"%(sensornum,r[sensornum+2],
+			    (r[sensornum+2]-(self.DUMMY_SENSORS[sensornum-1]*1000))/(self.DUMMY_SENSORS[sensornum-1]*1000)*100),
+	    sensornum += 1
+	    if sensornum <= numSensorsToRead-3:
+		print "\tSensor%2d: %.0fohms  err: %4.1f%%"%(sensornum,r[sensornum+2],
+			    (r[sensornum+2]-(self.DUMMY_SENSORS[sensornum-1]*1000))/(self.DUMMY_SENSORS[sensornum-1]*1000)*100),
+		sensornum += 1
+	    print
+	print "***************************************************************************\n"
+	
