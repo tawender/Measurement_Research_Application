@@ -11,6 +11,8 @@ class ChipFixture(object):
     CMD_READ_HUMIDITY = 0x4F
     CMD_READ_PRESSURE = 0x50
     CMD_START_MEASUREMENTS = 0x81
+    CMD_READ_STATUS			= 0x1D
+    CMD_SET_MEAS_DELAY			= 0x1E
     CMD_ENABLE_AUTORANGE		= 0x1F
     CMD_DISABLE_AUTORANGE		= 0x20
     CMD_SET_DAC1 			= 0x21
@@ -43,9 +45,20 @@ class ChipFixture(object):
     def sendCommand(self,cmd):
         """send a single command byte to the device
         """
-        if ((cmd >= 0) and (cmd <= 256)):
+        if ((cmd >= 0) and (cmd <= 255)):
             self.bus.write_byte(self.i2c_addr,cmd)
 	    
+    def setMeasurementDelayMsec(self,msec):
+	"""sets the number of milliseconds to delay after selecting the next
+	   sensor(when looping through multiple measurements) before taking
+	   the voltage measurement at the ADC"""
+	if (msec<1):
+	    msec = 1
+	elif (msec>255):
+	    msec = 255
+	self.sendCommand(self.CMD_SET_MEAS_DELAY)
+	self.bus.write_byte(self.i2c_addr, msec)
+	
     def setDAC(self,DACnum,voltage):
 	"""send command, then data to change DAC setting"""
 	dac_counts = int(voltage * 4095 / 2.5)
@@ -125,6 +138,52 @@ class ChipFixture(object):
         list_of_bytes = self.bus.read_i2c_block_data(self.i2c_addr,self.CMD_READ_SENSOR_BASE+sensor_num,4)
 
         return self.bytesToFloat(list_of_bytes)
+	
+    def readStatus(self):
+	"""reads the 9 status bytes:
+		4 bytes representing a float for DAC1 voltage
+		4 bytes representing a float for DAC2 voltage
+		1 byte with status flags
+	"""
+	list_of_bytes = self.bus.read_i2c_block_data(self.i2c_addr,self.CMD_READ_STATUS,10)
+	
+	return (self.bytesToFloat(list_of_bytes[0:4]),
+		 self.bytesToFloat(list_of_bytes[4:8]),
+		 list_of_bytes[8],list_of_bytes[9])
+	
+    def printStatus(self):
+	"""reads the device status and prints the results
+	   to the command prompt"""
+	   
+	status_data = self.readStatus()
+	selectedRbias = (status_data[2] & 0x03) + 1
+	if (status_data[2] & 0x4):
+	    circuitUsed = 'Constant Current'
+	else:
+	    circuitUsed = 'Constant Voltage'
+	if (status_data[2] & 0x8):
+	    sensorsGrounded = 'grounded'
+	else:
+	    sensorsGrounded = 'ungrounded'
+	if (status_data[2] & 0x10):
+	    CCcircuitGrounded = 'grounded'
+	else:
+	    CCcircuitGrounded = 'ungrounded'
+	if (status_data[2] & 0x20):
+	    CCautorange = 'on'
+	else:
+	    CCautorange = 'off'
+	
+	print "\n***************************************************************************"
+	print "*************************    Fixture Status    ****************************"
+	print "    DAC1 voltage: %.3fV     DAC2 voltage: %.3fV"%(status_data[0],status_data[1])
+	print "    Circuit Used: %s"%(circuitUsed)
+	print "    Sensor Grounding: %s"%(sensorsGrounded)
+	print "    Constant Current Circuit Grounding: %s"%(CCcircuitGrounded)
+	print "    Constant Current Autorange: %s"%(CCautorange)
+	print "    Measurement delay: %dmsec"%(status_data[3])
+	print "***************************************************************************\n"
+	
 
     def _readI2cData(self,firstFloatCmd,numFloatsToRead, _print=False):
         """
