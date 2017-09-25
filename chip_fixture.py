@@ -144,12 +144,14 @@ class ChipFixture(object):
 		4 bytes representing a float for DAC1 voltage
 		4 bytes representing a float for DAC2 voltage
 		1 byte with status flags
+		1 byte for delay between sensor selection and adc measurement in milliseconds
+		1 byte for currently selected sensor
 	"""
-	list_of_bytes = self.bus.read_i2c_block_data(self.i2c_addr,self.CMD_READ_STATUS,10)
+	list_of_bytes = self.bus.read_i2c_block_data(self.i2c_addr,self.CMD_READ_STATUS,11)
 	
 	return (self.bytesToFloat(list_of_bytes[0:4]),
 		 self.bytesToFloat(list_of_bytes[4:8]),
-		 list_of_bytes[8],list_of_bytes[9])
+		 list_of_bytes[8],list_of_bytes[9],list_of_bytes[10])
 	
     def printStatus(self):
 	"""reads the device status and prints the results
@@ -182,6 +184,7 @@ class ChipFixture(object):
 	print "    Constant Current Circuit Grounding: %s"%(CCcircuitGrounded)
 	print "    Constant Current Autorange: %s"%(CCautorange)
 	print "    Measurement delay: %dmsec"%(status_data[3])
+	print "    Currently Selected Sensor: %d"%(status_data[4])
 	print "***************************************************************************\n"
 	
 

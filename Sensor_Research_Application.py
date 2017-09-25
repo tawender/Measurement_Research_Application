@@ -85,12 +85,14 @@ class App:
         self.tabs.grid(row=0,column=0,padx=10,pady=10)
         self.tab1_frame = Frame(self.tabs)
         self.tab2_frame = Frame(self.tabs)
+	self.tab3_frame = Frame(self.tabs)
 	
 	self.read_config_file()
 	self.search_I2C_devices()
 	self.create_chip_fixture_instances()
 	self.search_mfc_devices()
 	self.create_mfc_instances()
+	self.create_circuit_control_section()
 
         self.create_mfc_displays()
         self.create_test_configuration_section()
@@ -98,6 +100,7 @@ class App:
 
         self.tabs.add(self.tab1_frame,text='Fixture Control')
         self.tabs.add(self.tab2_frame,text='Test Condition Setup')
+	self.tabs.add(self.tab3_frame,text='Test Circuit Control')
 
         self.root.protocol("WM_DELETE_WINDOW", self.onExit)
 
@@ -135,6 +138,14 @@ class App:
 	self.MFC_baud_rate = int(self.config_file.get('MFC Controls','MFC baud rate'))
 	
         self.sample_interval_msec = int(self.config_file.get('Measurement Controls','sample interval msec'))
+	self.DAC1_voltage_min_setting = float(self.config_file.get('Circuit Controls','DAC1 min voltage setting'))
+	self.DAC1_voltage_max_setting = float(self.config_file.get('Circuit Controls','DAC1 max voltage setting'))
+	self.DAC2_voltage_min_setting = float(self.config_file.get('Circuit Controls','DAC2 min voltage setting'))
+	self.DAC2_voltage_max_setting = float(self.config_file.get('Circuit Controls','DAC2 max voltage setting'))
+	self.min_measurement_delay_msec = int(self.config_file.get('Circuit Controls','min measurement delay msec'))
+	self.max_measurement_delay_msec = int(self.config_file.get('Circuit Controls','max measurement delay msec'))
+	self.min_sensor_number = int(self.config_file.get('Circuit Controls','min sensor number'))
+	self.max_sensor_number = int(self.config_file.get('Circuit Controls','max sensor number'))	
 	
         self.plot_span_seconds = int(self.config_file.get('Plot Controls','scroll seconds'))
         self.scroll_checkbox_tmp = self.config_file.getboolean('Plot Controls','scrolling enabled')
@@ -191,6 +202,98 @@ class App:
 	    for mfc_id in self.found_MFC_IDs:
 		mfc = alicat.FlowController(address=mfc_id)
 		self.connected_MFCs.append(mfc)
+		
+    def onDAC1_click(self):
+	fixture_index = self.fixture_addr_strings.index(self.selected_fixture_id.get())
+	self.i2c_test_fixtures[fixture_index].setDAC(1,float(self.DAC1_voltage.get()))
+	
+    def onDAC1_enter(self,event=None):
+	new_val = float(self.DAC1_voltage.get())
+	
+	if new_val < self.DAC1_voltage_min_setting:
+	    new_val = self.DAC1_voltage_min_setting
+	    self.DAC1_value.set(new_val)
+	    
+	elif new_val > self.DAC1_voltage_max_setting:
+	    new_val = self.DAC1_voltage_max_setting
+	    self.DAC1_value.set(new_val)
+	
+	self.onDAC1_click()
+		
+    def onDAC2_click(self):
+	fixture_index = self.fixture_addr_strings.index(self.selected_fixture_id.get())
+	self.i2c_test_fixtures[fixture_index].setDAC(2,float(self.DAC2_voltage.get()))
+	
+    def onDAC2_enter(self,event=None):
+	new_val = float(self.DAC2_voltage.get())
+	
+	if new_val < self.DAC2_voltage_min_setting:
+	    new_val = self.DAC2_voltage_min_setting
+	    self.DAC2_value.set(new_val)
+	    
+	elif new_val > self.DAC2_voltage_max_setting:
+	    new_val = self.DAC2_voltage_max_setting
+	    self.DAC2_value.set(new_val)
+	
+	self.onDAC2_click()
+	
+    def create_circuit_control_section(self):
+	self.circuit_control_frame = LabelFrame(self.tab3_frame,padx=3,pady=3)
+	self.circuit_control_frame.grid(row=0,column=0,padx=10,pady=10,sticky=NW)
+	
+	#DAC1 voltage spin control
+	self.DAC1_value = StringVar()
+	self.DAC1_voltage = Spinbox(self.circuit_control_frame,from_=0,to=2.5,
+				    increment=0.05,width=6,command=self.onDAC1_click,textvariable=self.DAC1_value)
+	self.DAC1_voltage.grid(row=2,column=5,pady=2,sticky=E)
+	self.DAC1_voltage.bind('<Return>',self.onDAC1_enter)
+#	self.DAC1_voltage.bind('<Enter>',self.onDAC1_enter)
+	Label(self.circuit_control_frame,text="DAC1 voltage(volts)").grid(row=2,column=10,sticky=W)
+	
+	#DAC2 voltage spin control
+	self.DAC2_value = StringVar()
+	self.DAC2_voltage = Spinbox(self.circuit_control_frame,from_=0,to=2.5,
+				    increment=0.05,width=6,command=self.onDAC2_click,textvariable=self.DAC2_value)
+	self.DAC2_voltage.grid(row=3,column=5,pady=2,sticky=E)
+	self.DAC2_voltage.bind('<Return>',self.onDAC2_enter)
+#	self.DAC2_voltage.bind('<Enter>',self.onDAC2_enter)
+	Label(self.circuit_control_frame,text="DAC2 voltage(volts)").grid(row=3,column=10,sticky=W)
+	
+        ttk.Separator(self.circuit_control_frame,orient='horizontal').grid(row=4,column=5,columnspan=10,sticky='ew',pady=5)
+	
+	#using either constant current or constant voltage circuit
+	self.usingCCcircuitCb = Checkbutton(self.circuit_control_frame)
+	self.usingCCcircuitCb.grid(row=5,column=5)
+	Label(self.circuit_control_frame,text="Use Constant Current Circuit").grid(row=5,column=10,sticky=W)
+	
+	#one side of sensors grounded if using chips with 22 sensors
+	self.sensorsGroundedCb = Checkbutton(self.circuit_control_frame)
+	self.sensorsGroundedCb.grid(row=10,column=5)
+	Label(self.circuit_control_frame,text="Fixture Grounds One Side of Sensors").grid(row=10,column=10,sticky=W)
+	
+	#constant current circuit grounded through 1kohm resistor
+	self.ccCircuitGrounded = Checkbutton(self.circuit_control_frame)
+	self.ccCircuitGrounded.grid(row=15,column=5)
+	Label(self.circuit_control_frame,text="Constant Current Circuit Grounded").grid(row=15,column=10,sticky=W)
+	
+	#autorange in constant current circuit turned off or on
+	self.ccCircuitAutorange = Checkbutton(self.circuit_control_frame)
+	self.ccCircuitAutorange.grid(row=20,column=5)
+	Label(self.circuit_control_frame,text="Autorange Constant Current Circuit Measurements").grid(row=20,column=10,sticky=W)
+	
+        ttk.Separator(self.circuit_control_frame,orient='horizontal').grid(row=25,column=5,columnspan=10,sticky='ew',pady=5)
+	
+	#delay between sensor selection and adc measurement in milliseconds
+	self.delay_msec = Spinbox(self.circuit_control_frame,from_=0,to=255,
+				    increment=1,width=6)
+	self.delay_msec.grid(row=30,column=5,pady=2,sticky=E)
+	Label(self.circuit_control_frame,text="Delay Between Sensor Selection and ADC Read(msec)").grid(row=30,column=10,sticky=W)
+	
+	#sensor number that is currently selected
+	self.selected_sensor_spinbox = Spinbox(self.circuit_control_frame,from_=0,to=22,
+				    increment=1,width=6)
+	self.selected_sensor_spinbox.grid(row=35,column=5,pady=2,sticky=E)	
+	Label(self.circuit_control_frame,text="Selected Sensor").grid(row=35,column=10,sticky=W)
 
     def create_mfc_displays(self):
         self.mfc_monitors_frame = LabelFrame(self.tab1_frame,text="MFC Monitors",padx=3,pady=3)
@@ -247,7 +350,7 @@ class App:
 
     def create_test_configuration_section(self):
         mfc_control_frame = LabelFrame(self.tab2_frame,text="Test Configuration")
-        mfc_control_frame.grid(row=0,column=0,padx=10,pady=10,ipadx=5,ipady=5)
+        mfc_control_frame.grid(row=0,column=0,padx=10,pady=10,ipadx=5,ipady=5,sticky=NW)
 
         for mfc_num in range(self.num_connected_MFCs):
             #MFC ID for communication
