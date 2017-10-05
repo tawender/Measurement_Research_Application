@@ -37,10 +37,15 @@ class ChipFixture(object):
     def __init__(self,i2c_address,bus):
         self.bus = bus
         if ((i2c_address >= 1) and (i2c_address <= 0x7f)):
-            self.i2c_addr = i2c_address
+			self.i2c_addr = i2c_address
+			self.i2c_addr_str = "ID: %#x"%(self.i2c_addr)
+
         else:
             raise RuntimeError("Invalid I2C address (%#0x) creating Fixture object"%(i2c_address))
         self.num_sensor_bytes = 4
+		
+	def getAddressString(self):
+		return self.i2c_addr_str
 
     def sendCommand(self,cmd):
         """send a single command byte to the device
@@ -140,7 +145,7 @@ class ChipFixture(object):
         return self.bytesToFloat(list_of_bytes)
 	
     def readStatus(self):
-	"""reads the 9 status bytes:
+	"""reads the 11 status bytes:
 		4 bytes representing a float for DAC1 voltage
 		4 bytes representing a float for DAC2 voltage
 		1 byte with status flags
@@ -273,10 +278,10 @@ class ChipFixture(object):
         """
         self.sendCommand(self.CMD_START_MEASUREMENTS)
 
-    def readAll(self,totalValues=13):
+    def readAll(self,numValues=13):
         """reads pressure,temperature,humidity, and all sensors
         """
-        return self._readI2cData(self.CMD_READ_TEMPERATURE,totalValues)
+        return self._readI2cData(self.CMD_READ_TEMPERATURE,numValues)
 
     def bytesToFloat(self, l):
         """converts a list of 4 bytes to a 32-bit floating point value
