@@ -13,14 +13,14 @@ class FlowMeter(object):
     This communicates with the flow meter over a USB or RS-232/RS-485
     connection using pyserial.
     """
-    def __init__(self, port='/dev/ttyUSB0', address='A'):
+    def __init__(self, port='/dev/ttyUSB0', address='A',baud=19200):
         """Connects this driver with the appropriate USB / serial port.
         Args:
             port: The serial port. Default '/dev/ttyUSB0'.
             address: The Alicat-specified address, A-Z. Default 'A'.
         """
         self.address = address
-        self.connection = serial.Serial(port, 19200, timeout=1.0)
+        self.connection = serial.Serial(port, baud, timeout=1.0)
         self.keys = ['pressure', 'temperature', 'volumetric_flow', 'mass_flow',
                      'flow_setpoint', 'gas']
         self.gases = ['Air', 'Ar', 'CH4', 'CO', 'CO2', 'C2H6', 'H2', 'He',

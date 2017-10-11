@@ -18,8 +18,22 @@ import matplotlib.animation as an
 import chip_fixture
 import serial
 from datetime import datetime as dt
+from threading import Thread
+
+class MFC_ControlThread(Thread):
+	def __init__(self,num_seconds):
+		Thread.__init__(self)
+		self.num_seconds = num_seconds
+		
+	def run(self):
+		sec = 1
+		while(sec < self.num_seconds):
+			print "waiting %d"%(sec)
+			sec += 1
+			time.sleep(1)
 
 debug=True
+MFCdebug=False
 
 GPIO_TRIGGER_CHANNEL = 23
 
@@ -38,11 +52,6 @@ elif platform.system() == 'Linux':
     bus = smbus.SMBus(1)	#I2C bus
 
 
-#screen layout
-#num_MFCs = 6
-#num_MFC_displays = 2
-num_test_conditions = 20
-num_sensors_on_chip = 22
 
 class mfc_display:
 	def __init__(self):
@@ -134,6 +143,9 @@ class App:
 
 		self.onUpdate()
 		
+#		t=MFC_ControlThread(15)
+#		t.start()
+		
 		self.root.title("NEA Sensor Research")
 		self.root.geometry('1350x950')
 		self.root.mainloop()
@@ -146,6 +158,7 @@ class App:
 
 		self.MFC_com_port = self.config_file.get('MFC Controls','MFC COM port')
 		self.MFC_baud_rate = int(self.config_file.get('MFC Controls','MFC baud rate'))
+		self.MFC_search_delay = float(self.config_file.get('MFC Controls','MFC search response delay msec')) / 1000.0
 
 		self.sample_interval_msec = int(self.config_file.get('Measurement Controls','sample interval msec'))
 		self.trigger_width_msec = int(self.config_file.get('Measurement Controls','measurement trigger pulse width msec'))
@@ -169,6 +182,8 @@ class App:
 		self.samples_before_write = int(self.config_file.get('Output','samples before write'))
 
 		self.num_comments = int(self.config_file.get('User Input','number of comments'))
+		self.num_test_conditions = int(self.config_file.get('User Input','number of test conditions'))
+		self.num_sensors_on_chip = int(self.config_file.get('User Input','number of sensors on chip'))
 
 	def search_I2C_devices(self):
 		if debug: print "Searching for connected I2C devices..."
@@ -191,32 +206,52 @@ class App:
 		self.i2c_test_fixtures = []
 		for id in self.fixture_addresses:
 			self.i2c_test_fixtures.append(chip_fixture.ChipFixture(id,bus))
-			
+
 	def search_mfc_devices(self):
-		if debug: print "Searching for MFCs connected..."
+		if debug: print "Searching for connected MFCs..."
 		ser = serial.Serial(self.MFC_com_port, self.MFC_baud_rate, timeout=0.1)
 		self.found_MFC_IDs = []
 
 		#scan ascii 'A' to ascii 'Z' for connected MFCs
 		for id in range(65,91,1):
+			if MFCdebug: print "searching %s: "%(chr(id))
 			ser.flushInput()
 			ser.flushOutput()
 			ser.write("%s\r"%(chr(id)))
-			time.sleep(0.05)
+			time.sleep(self.MFC_search_delay)
 			ret=ser.read(1)
+			if MFCdebug: print "  %s"%(ret)
 			if ret==chr(id):
 				self.found_MFC_IDs.append(chr(id))
-			
+
 		self.num_connected_MFCs = len(self.found_MFC_IDs)
 		if debug: print "Found MFCs: ",self.found_MFC_IDs
+		
+		return self.found_MFC_IDs
 		
 	def create_mfc_instances(self):
 		if platform.system() == 'Linux':
 			self.connected_MFCs = []
 			
 			for mfc_id in self.found_MFC_IDs:
-				mfc = alicat.FlowController(address=mfc_id)
+				mfc = alicat.FlowController(address=mfc_id,baud=self.MFC_baud_rate)
 				self.connected_MFCs.append(mfc)
+				
+	def onNumLoops_click(self):
+		pass
+		
+	def onNumLoops_enter(self,event=None):
+		self.tab2_frame.focus_set()
+		
+		new_val = float(self.num_loops.get())
+		
+		if new_val < 0:
+			new_val = 0
+			self.num_loops.set(new_val)
+
+		elif new_val > 999:
+			new_val = 999
+			self.num_loops.set(new_val)
 		
 	def onDAC1_click(self):
 		fixture_index = self.fixture_addr_strings.index(self.selected_fixture_id.get())
@@ -519,7 +554,7 @@ class App:
 
 		for mfc_num in range(self.num_connected_MFCs):
 			#MFC ID for communication
-			Label(mfc_control_frame,text="    MFC ID:").grid(row=1,column=3+mfc_num*4,sticky=E)
+			Label(mfc_control_frame,text="      MFC ID:").grid(row=1,column=3+mfc_num*4,sticky=E)
 			mfc_id = Label(mfc_control_frame,text=self.found_MFC_IDs[mfc_num],
 					borderwidth=2,relief='sunken',width=2)
 			mfc_id.grid(row=1,column=4+mfc_num*4,sticky=W)
@@ -529,24 +564,35 @@ class App:
 					borderwidth=2,relief='sunken',width=5)
 			gas.grid(row=1,column=6+mfc_num*4,sticky=W)
 
-		test_condition_checkboxes = []
+		self.test_condition_checkboxes = []
 		test_condition_times = []
 		test_condition_settings = []
-		for test_condition in range(num_test_conditions):
+		for test_condition in range(self.num_test_conditions):
 			#checkbox to enable test condition
 			cb = Checkbutton(mfc_control_frame)
 			cb.grid(row=2+test_condition,column=0,sticky=W,pady=3)
-			test_condition_checkboxes.append(cb)
+			self.test_condition_checkboxes.append(cb)
 			#time this test condition will last
 			Label(mfc_control_frame,text="seconds:").grid(row=2+test_condition,column=1,sticky=E)
-			e = Entry(mfc_control_frame,width=4)
+			e = Entry(mfc_control_frame,width=5)
 			e.grid(row=2+test_condition,column=2,sticky=W)
 			test_condition_times.append(e)
 			for mfc_num in range(self.num_connected_MFCs):
 				Label(mfc_control_frame,text="scfm:").grid(row=2+test_condition,column=4+mfc_num*4,sticky=E)
-				e = Entry(mfc_control_frame,width=3)
+				e = Entry(mfc_control_frame,width=5)
 				e.grid(row=2+test_condition,column=5+mfc_num*4,sticky=W)
 				test_condition_settings.append(e)
+				
+		#checkbox for loop control
+		self.loop_cb = Checkbutton(mfc_control_frame)
+		self.loop_cb.grid(row=2+self.num_test_conditions,column=0,sticky=W,pady=3)
+		Label(mfc_control_frame,text="Loop All Test Conditions").grid(row=2+self.num_test_conditions,column=1,columnspan=3,sticky=W)
+		self.num_loops = StringVar()
+		self.num_loops_spin = Spinbox(mfc_control_frame,from_=0,to=999,
+									increment=1,width=5,textvariable=self.num_loops)
+		self.num_loops_spin.grid(row=2+self.num_test_conditions,column=4,columnspan=2,sticky=W)
+		self.num_loops_spin.bind('<Return>',self.onNumLoops_enter)
+		self.num_loops_spin.bind('<KP_Enter>',self.onNumLoops_enter)
 		
 		#user input to describe chips and test conditions
 		test_description_frame = LabelFrame(self.tab2_frame,text="Test Description")
@@ -606,7 +652,7 @@ class App:
 
 		self.sensor_readouts = []
 		self.sensor_checkboxes = []
-		for sensor in range(num_sensors_on_chip):
+		for sensor in range(self.num_sensors_on_chip):
 			cb = Checkbutton(self.chip_fixture_monitor_frame)
 			cb.grid(row=15+sensor,column=0)
 			self.sensor_checkboxes.append(cb)
@@ -823,6 +869,7 @@ class App:
 				self.outfile.write("\n")
 		
 		self.outfile.flush()
+		print "write done, outfile flushed"
 
 	def read_fixture_measurements(self):
 
