@@ -70,12 +70,20 @@ class FlowMeter(object):
         Returns:
             The state of the flow controller, as a dictionary.
         """
-        command = '{addr}\r'.format(addr=self.address)
-        line = self._write_and_read(command, retries)
+        try:
+            command = '{addr}\r'.format(addr=self.address)
+            line = self._write_and_read(command, retries)
+            return self._decode_line(line)
+        except Exception as e:
+            print "failed command: ",command_line
+            raise e
+                
+    def _decode_line(self, line):
         spl = line.split()
         address, values = spl[0], spl[1:]
         if address != self.address:
-            raise ValueError("Flow controller address mismatch.")
+            print "line: ",line
+            raise ValueError("Flow controller address mismatch. addr: %s != self.addr: %s"%(address,self.address))
         if len(values) == 5 and len(self.keys) == 6:
             del self.keys[-2]
         elif len(values) == 7 and len(self.keys) == 6:
@@ -146,7 +154,7 @@ class FlowController(FlowMeter):
     To set up your Alicat flow controller, power on the device and make sure
     that the "Input" option is set to "Serial".
     """
-    def set_flow_rate(self, flow, retries=2):
+    def set_flow_rate(self, flow, retries=2, verify_flow_change=True):
         """Sets the target flow rate.
         Args:
             flow: The target flow rate, in units specified at time of purchase
@@ -154,9 +162,11 @@ class FlowController(FlowMeter):
         command = '{addr}S{flow:.2f}\r'.format(addr=self.address, flow=flow)
         line = self._write_and_read(command, retries)
         # The alicat also responds with a line of data, which we should read
-        self._readline()
-        if abs(float(line) - flow) > 0.01:
-            raise IOError("Could not set flow.")
+        #self._readline()
+        #ret = self._decode_line(line)
+        if verify_flow_change:
+            if abs(float(line) - flow) > 0.01:
+                raise IOError("Could not set flow.")
 
 
 def command_line():

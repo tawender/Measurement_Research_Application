@@ -76,6 +76,7 @@ class MFC_ControlThread(Thread):
 			for setting in mfc_settings_list:
 				next_list.append(setting.get())
 			self.mfc_settings.append(next_list)
+		print "MFC Settings: ",self.mfc_settings
 		
 		#flag for if loop testing is enabled
 		self.looping_enabled = q.get()
@@ -103,20 +104,33 @@ class MFC_ControlThread(Thread):
 		global testDone
 
 		for j in range(self.num_loops):
-			if self.looping_enabled: print "     Loop #%d"%(j+1)
+			if self.looping_enabled:
+				if thread_debug: print "     Loop #%d"%(j+1)
 			for i in range(len(self.test_condition_flags)):
 				if self.test_condition_flags[i]:
 					
 					#set MFCs for this test condition
 					if thread_debug: print "Setting MFCs for test condition %d"%(i+1)
+					if thread_debug: print "  self.mfc_settings[i]: ",self.mfc_settings[i]
+					for setting_index in range(len(self.mfc_settings[i])):
+						if thread_debug: print "setting index: %d      Changing MFC ID %s to %.2f"%(setting_index,self.
+												MFCs[setting_index].get_id(),float(self.mfc_settings[i][setting_index]))
+						self.MFCs[setting_index].flowController.set_flow_rate(float(self.mfc_settings[i][setting_index]),
+																				verify_flow_change=False)
 					
 					#find start time
 					start = time.time()
 					
 					if thread_debug: print "  waiting for elapsed time of %d seconds..."%(self.test_condition_times[i])
 					#loop until this test condition time has elapsed
-					while ( (time.time() - start) < self.test_condition_times[i]):
+					now = time.time()
+					while ( (now - start) < self.test_condition_times[i] and testDone is not 'Halt'):
+						if thread_debug: print "Inside thread, elapsed: %.3f of %.3f"%(now-start,self.test_condition_times[i])
 						time.sleep(0.1)
+						now = time.time()
+					if testDone is 'Halt':
+						if thread_debug: print "User halted test"
+						return
 						
 					if thread_debug: print "  ...interval completed"
 		if thread_debug: print "Test Completed\n\n"
@@ -190,6 +204,7 @@ class App:
 		self.create_test_configuration_section()
 		self.create_fixture_monitoring_section()
 		self.create_test_controls()
+		self.create_statusBar()
 
 		self.tabs.add(self.tab1_frame,text='Fixture Control')
 		self.tabs.add(self.tab2_frame,text='Test Condition Setup')
@@ -211,6 +226,7 @@ class App:
 		self.test_completed = False
 		self.samples_since_write = 0
 		self.testNum = 10
+		self.elapsed_seconds = 0
 
 		if platform.system() == 'Linux':
 			self.pi = pigpio.pi()
@@ -224,7 +240,7 @@ class App:
 #		t.start()
 		
 		self.root.title("NEA Sensor Research")
-		self.root.geometry('1350x950')
+		self.root.geometry('1350x940')
 		self.root.mainloop()
 
 	def readConfigFile(self):
@@ -259,8 +275,9 @@ class App:
 		self.samples_before_write = int(self.config_file.get('Output','samples before write'))
 
 		self.num_comments = int(self.config_file.get('User Input','number of comments'))
-		self.num_test_conditions = int(self.config_file.get('User Input','number of test conditions'))
-		self.num_sensors_on_chip = int(self.config_file.get('User Input','number of sensors on chip'))
+		
+		self.num_test_conditions = int(self.config_file.get('Test Controls','number of test conditions'))
+		self.num_sensors_on_chip = int(self.config_file.get('Test Controls','number of sensors on chip'))
 
 	def searchI2Cdevices(self):
 		if debug: print "Searching for connected I2C devices..."
@@ -731,7 +748,7 @@ class App:
 		ttk.Separator(self.chip_fixture_monitor_frame,orient='horizontal').grid(row=13,column=0,columnspan=5,sticky='ew',pady=5)
 
 		#individual sensor readings
-		Label(self.chip_fixture_monitor_frame,text="Gas Sensor Readings (Kohms)").grid(row=14,column=0,columnspan=5,pady=1)
+		Label(self.chip_fixture_monitor_frame,text="Gas Sensor Readings (ohms)").grid(row=14,column=0,columnspan=5,pady=1)
 
 		self.sensor_readouts = []
 		self.sensor_checkboxes = []
@@ -748,7 +765,7 @@ class App:
 		self.monitor_controls_frame = LabelFrame(self.chip_fixture_monitor_frame,borderwidth=0,padx=10,pady=10)
 		self.monitor_controls_frame.grid(row=50,column=0,columnspan=5,padx=10,pady=10,sticky=N)
 		self.monitor_button_text = StringVar()
-		self.monitor_button_text.set("Begin Display Updates")
+		self.monitor_button_text.set("Begin Screen Updates")
 		self.monitor_control_button = Button(self.monitor_controls_frame,command=self.onMonitorcontrol,
 									textvariable=self.monitor_button_text,height=1,width=20).grid(row=0,column=0)
 
@@ -763,6 +780,32 @@ class App:
 		self.test_stop_button = Button(self.test_controls_frame,text="Stop",command=self.onStopTest,
 																	height=1,width=button_width)
 		self.test_stop_button.grid(row=0,column=1)
+		
+	def create_statusBar(self):
+		self.statusBar_frame = LabelFrame(self.mainPanel,relief='sunken')
+		self.statusBar_frame.grid(row=1,column=0,padx=10,sticky=SW)
+		self.statusBar_frame.width = 800
+		
+		statusText = "Status:"
+		for i in range(208): statusText += " "
+		self.statusText = Label(self.statusBar_frame,text=statusText)
+		self.statusText.grid(row=5,pady=2,column=2,columnspan=5,sticky=W)
+		
+		Label(self.statusBar_frame,text="Test Progress:").grid(row=5,column=9,padx=1)
+		
+		self.progressBar = ttk.Progressbar(self.statusBar_frame,orient='horizontal',length=300,mode='determinate')
+		self.progressBar.grid(row=5,column=10,padx=5,sticky=E)
+		self.progressBar['maximum'] = 1000
+		
+	def calculateTestTime(self):
+		testSeconds = 0
+		for i in range(self.num_test_conditions):
+			if self.test_condition_checkboxes[i].get():
+				testSeconds += self.test_condition_times[i].get()
+		if self.looping_enabled.get():
+			testSeconds *= self.num_loops.get()
+		self.progressBar['maximum'] = testSeconds
+		print "total test time: %d seconds"%(testSeconds)
 
 	def create_menu(self):
 		menubar = Menu(self.root)
@@ -772,7 +815,7 @@ class App:
 		filemenu.add_separator()
 		filemenu.add_command(label="Exit",command=self.onExit)
 		menubar.add_cascade(label="File",menu=filemenu)
-		
+
 		testConfigMenu = Menu(menubar, tearoff=0)
 		testConfigMenu.add_command(label="Save Test Configuration",state=DISABLED)
 		testConfigMenu.add_command(label="Save Test Configuration as...",state=DISABLED)
@@ -847,6 +890,9 @@ class App:
 						monitor.update_readings()
 
 				if self.testing_state == 'running':
+					self.elapsed_seconds += self.sample_interval_msec / 1000
+					self.progressBar['value'] = self.elapsed_seconds
+					print "progress: %d of %d"%(self.elapsed_seconds,self.progressBar['maximum'])
 
 					self.samples_since_write += 1
 					if self.samples_since_write == self.samples_before_write:
@@ -854,6 +900,7 @@ class App:
 						self.samples_since_write = 0
 
 					if testDone:
+						self.progressBar['value'] = self.progressBar['maximum']
 						self.onStopTest()
 
 			self.root.after(self.sample_interval_msec,self.onUpdate)
@@ -877,13 +924,13 @@ class App:
 		
 		if self.monitor_state == 'running':
 			self.monitor_state = 'stopped'
-			self.monitor_button_text.set("Resume Display Updates")
+			self.monitor_button_text.set("Resume Screen Updates")
 		
 		elif (self.monitor_state == 'stopped' and self.testing_state == 'stopped'):
 			self.data_containers = self.create_data_containers()
 			self.current_sample_number = 0
 			self.monitor_state = 'running'
-			self.monitor_button_text.set("Pause Display Updates")
+			self.monitor_button_text.set("Pause Screen Updates")
 
 	def onBeginTest(self):
 		if self.testing_state == 'stopped':
@@ -901,8 +948,11 @@ class App:
 			self.create_new_outfile()
 			self.current_sample_number = 0
 			self.samples_since_write = 0
+			self.elapsed_seconds = 0
 			
 			self.data_containers = self.create_data_containers()
+			self.calculateTestTime()
+			self.progressBar['value'] = self.elapsed_seconds
 			
 			global testDone
 			testDone = False
@@ -914,6 +964,8 @@ class App:
 		self.testing_state = 'stopped'
 		self.outfile.close()
 		if file_debug: print "Outfile closed."
+		global testDone
+		testDone = 'Halt'
 		
 	def create_data_containers(self):
 		""" each fixture has a dictionary with keyed lists(5) for temperature,
