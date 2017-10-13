@@ -19,21 +19,15 @@ import chip_fixture
 import serial
 from datetime import datetime as dt
 from threading import Thread
+from Queue import Queue
 
-class MFC_ControlThread(Thread):
-	def __init__(self,num_seconds):
-		Thread.__init__(self)
-		self.num_seconds = num_seconds
-		
-	def run(self):
-		sec = 1
-		while(sec < self.num_seconds):
-			print "waiting %d"%(sec)
-			sec += 1
-			time.sleep(1)
 
 debug=True
 MFCdebug=False
+thread_debug=True
+file_debug=False
+
+testDone = False
 
 GPIO_TRIGGER_CHANNEL = 23
 
@@ -50,6 +44,85 @@ elif platform.system() == 'Linux':
     import pigpio
     import smbus
     bus = smbus.SMBus(1)	#I2C bus
+
+
+class MFC_ControlThread(Thread):
+	def __init__(self,q):
+		Thread.__init__(self)
+		
+		#state variable used for file operations
+		self.completed = q.get()
+		
+		#list of MFC displays that can be used to change flow settings
+		self.MFCs = q.get()
+		
+		#checkboxes used to turn test condition on or off
+		flags = q.get()
+		self.test_condition_flags = list()
+		for flag in flags:
+			self.test_condition_flags.append(flag.get())
+			
+		#the time a test condition(MFC settings) should be run
+		times = q.get()
+		self.test_condition_times = list()
+		for t in times:
+			self.test_condition_times.append(t.get())
+		
+		#a list of lists containing flow values to program into MFCs
+		mfc_settings_lists = q.get()
+		self.mfc_settings = list()
+		for mfc_settings_list in mfc_settings_lists:
+			next_list = list()
+			for setting in mfc_settings_list:
+				next_list.append(setting.get())
+			self.mfc_settings.append(next_list)
+		
+		#flag for if loop testing is enabled
+		self.looping_enabled = q.get()
+		
+		#number of loops to run if looping is enabled
+		num_loops = q.get()
+		if self.looping_enabled:
+			self.num_loops = num_loops
+		else:
+			self.num_loops = 1
+
+		if thread_debug:
+			print "***Test Condition Listing***"
+			for j in range(self.num_loops):
+				if self.looping_enabled: print "    Loop #%d"%(j+1)
+				for i in range(len(self.test_condition_flags)):
+					if self.test_condition_flags[i]:
+						print "test condition %d enabled"%(i+1)
+						print "  interval: %d seconds"%(self.test_condition_times[i])
+						for setting in self.mfc_settings[i]:
+							print "  setting: %s"%(setting)
+			print "******************"
+
+	def run(self):
+		global testDone
+
+		for j in range(self.num_loops):
+			if self.looping_enabled: print "     Loop #%d"%(j+1)
+			for i in range(len(self.test_condition_flags)):
+				if self.test_condition_flags[i]:
+					
+					#set MFCs for this test condition
+					if thread_debug: print "Setting MFCs for test condition %d"%(i+1)
+					
+					#find start time
+					start = time.time()
+					
+					if thread_debug: print "  waiting for elapsed time of %d seconds..."%(self.test_condition_times[i])
+					#loop until this test condition time has elapsed
+					while ( (time.time() - start) < self.test_condition_times[i]):
+						time.sleep(0.1)
+						
+					if thread_debug: print "  ...interval completed"
+		if thread_debug: print "Test Completed\n\n"
+		
+		#change the state variable so main program knows to close the file
+		testDone = True
 
 
 
@@ -106,16 +179,17 @@ class App:
 		self.tab2_frame = Frame(self.tabs)
 		self.tab3_frame = Frame(self.tabs)
 
-		self.read_config_file()
-		self.search_I2C_devices()
+		self.readConfigFile()
+		self.searchI2Cdevices()
 		self.create_chip_fixture_instances()
-		self.search_mfc_devices()
+		self.searchMFCdevices()
 		self.create_mfc_instances()
 		self.create_circuit_control_section()
 
 		self.create_mfc_displays()
 		self.create_test_configuration_section()
 		self.create_fixture_monitoring_section()
+		self.create_test_controls()
 
 		self.tabs.add(self.tab1_frame,text='Fixture Control')
 		self.tabs.add(self.tab2_frame,text='Test Condition Setup')
@@ -133,7 +207,10 @@ class App:
 		self.t_color = 'g'
 		self.create_plot()
 		self.monitor_state = 'stopped'
+		self.testing_state = 'stopped'
+		self.test_completed = False
 		self.samples_since_write = 0
+		self.testNum = 10
 
 		if platform.system() == 'Linux':
 			self.pi = pigpio.pi()
@@ -150,7 +227,7 @@ class App:
 		self.root.geometry('1350x950')
 		self.root.mainloop()
 
-	def read_config_file(self):
+	def readConfigFile(self):
 		self.config_file_name = "settings.cfg"
 		self.c_file = open(self.config_file_name, 'r')
 		self.config_file = ConfigParser()
@@ -185,7 +262,7 @@ class App:
 		self.num_test_conditions = int(self.config_file.get('User Input','number of test conditions'))
 		self.num_sensors_on_chip = int(self.config_file.get('User Input','number of sensors on chip'))
 
-	def search_I2C_devices(self):
+	def searchI2Cdevices(self):
 		if debug: print "Searching for connected I2C devices..."
 		self.fixture_addresses = []
 		self.fixture_addr_strings = []
@@ -207,7 +284,7 @@ class App:
 		for id in self.fixture_addresses:
 			self.i2c_test_fixtures.append(chip_fixture.ChipFixture(id,bus))
 
-	def search_mfc_devices(self):
+	def searchMFCdevices(self):
 		if debug: print "Searching for connected MFCs..."
 		ser = serial.Serial(self.MFC_com_port, self.MFC_baud_rate, timeout=0.1)
 		self.found_MFC_IDs = []
@@ -269,7 +346,7 @@ class App:
 			self.DAC1_value.set(new_val)
 
 		self.onDAC1_click()
-		self.focus_to_tab()
+		self.FocusToTab()
 
 	def onDAC2_click(self):
 		fixture_index = self.fixture_addr_strings.index(self.selected_fixture_id.get())
@@ -287,7 +364,7 @@ class App:
 			self.DAC2_value.set(new_val)
 
 		self.onDAC2_click()
-		self.focus_to_tab()
+		self.FocusToTab()
 
 	def onDelayMsec_spinClick(self):
 		fixture_index = self.fixture_addr_strings.index(self.selected_fixture_id.get())
@@ -305,7 +382,7 @@ class App:
 			self.delay_msec.set(new_val)
 
 		self.onDelayMsec_spinClick()
-		self.focus_to_tab()
+		self.FocusToTab()
 
 	def onSelectedSensor_spinClick(self):
 		fixture_index = self.fixture_addr_strings.index(self.selected_fixture_id.get())
@@ -323,7 +400,7 @@ class App:
 			self.selected_sensor.set(new_val)
 
 		self.onSelectedSensor_spinClick()
-		self.focus_to_tab()
+		self.FocusToTab()
 		
 	def onRbias_click(self):
 		fixture_index = self.fixture_addr_strings.index(self.selected_fixture_id.get())
@@ -341,7 +418,7 @@ class App:
 			self.selected_Rbias.set(new_val)
 
 		self.onRbias_click()
-		self.focus_to_tab()
+		self.FocusToTab()
 		
 	def onUsingCCcircuit_clicked(self):
 		fixture_index = self.fixture_addr_strings.index(self.selected_fixture_id.get())
@@ -376,9 +453,9 @@ class App:
 		tab = event.widget.tab(selection,"text")
 
 		if tab == 'Test Circuit Control':
-			self.update_displayed_circuit_status()
+			self.updateDisplayedCircuitStatus()
 
-	def update_displayed_circuit_status(self):
+	def updateDisplayedCircuitStatus(self):
 		fixture_index = self.fixture_addr_strings.index(self.selected_fixture_id.get())
 		returned_status_data = self.i2c_test_fixtures[fixture_index].readStatus()
 		
@@ -411,7 +488,7 @@ class App:
 			self.delay_msec.set(returned_status_data[3])
 			self.selected_sensor.set(returned_status_data[4])
 			
-	def focus_to_tab(self):
+	def FocusToTab(self):
 		self.tab3_frame.focus_set()
 
 	def create_circuit_control_section(self):
@@ -565,34 +642,40 @@ class App:
 			gas.grid(row=1,column=6+mfc_num*4,sticky=W)
 
 		self.test_condition_checkboxes = []
-		test_condition_times = []
-		test_condition_settings = []
+		self.test_condition_times = []
+		self.test_condition_settings = []
 		for test_condition in range(self.num_test_conditions):
 			#checkbox to enable test condition
-			cb = Checkbutton(mfc_control_frame)
+			cbVar = IntVar()
+			cb = Checkbutton(mfc_control_frame,variable=cbVar)
 			cb.grid(row=2+test_condition,column=0,sticky=W,pady=3)
-			self.test_condition_checkboxes.append(cb)
+			self.test_condition_checkboxes.append(cbVar)
 			#time this test condition will last
 			Label(mfc_control_frame,text="seconds:").grid(row=2+test_condition,column=1,sticky=E)
-			e = Entry(mfc_control_frame,width=5)
+			timeVar = IntVar()
+			e = Entry(mfc_control_frame,width=5,textvariable=timeVar)
 			e.grid(row=2+test_condition,column=2,sticky=W)
-			test_condition_times.append(e)
+			self.test_condition_times.append(timeVar)
+			next_list_of_MFC_settings = []
 			for mfc_num in range(self.num_connected_MFCs):
 				Label(mfc_control_frame,text="scfm:").grid(row=2+test_condition,column=4+mfc_num*4,sticky=E)
-				e = Entry(mfc_control_frame,width=5)
+				MFCsettingVar = StringVar()
+				e = Entry(mfc_control_frame,width=5,textvariable=MFCsettingVar)
 				e.grid(row=2+test_condition,column=5+mfc_num*4,sticky=W)
-				test_condition_settings.append(e)
-				
+				next_list_of_MFC_settings.append(e)
+			self.test_condition_settings.append(next_list_of_MFC_settings)
+
 		#checkbox for loop control
-		self.loop_cb = Checkbutton(mfc_control_frame)
+		self.looping_enabled = IntVar()
+		self.loop_cb = Checkbutton(mfc_control_frame,variable=self.looping_enabled)
 		self.loop_cb.grid(row=2+self.num_test_conditions,column=0,sticky=W,pady=3)
 		Label(mfc_control_frame,text="Loop All Test Conditions").grid(row=2+self.num_test_conditions,column=1,columnspan=3,sticky=W)
-		self.num_loops = StringVar()
-		self.num_loops_spin = Spinbox(mfc_control_frame,from_=0,to=999,
+		self.num_loops = IntVar()
+		num_loops_spin = Spinbox(mfc_control_frame,from_=0,to=999,
 									increment=1,width=5,textvariable=self.num_loops)
-		self.num_loops_spin.grid(row=2+self.num_test_conditions,column=4,columnspan=2,sticky=W)
-		self.num_loops_spin.bind('<Return>',self.onNumLoops_enter)
-		self.num_loops_spin.bind('<KP_Enter>',self.onNumLoops_enter)
+		num_loops_spin.grid(row=2+self.num_test_conditions,column=4,columnspan=2,sticky=W)
+		num_loops_spin.bind('<Return>',self.onNumLoops_enter)
+		num_loops_spin.bind('<KP_Enter>',self.onNumLoops_enter)
 		
 		#user input to describe chips and test conditions
 		test_description_frame = LabelFrame(self.tab2_frame,text="Test Description")
@@ -661,18 +744,25 @@ class App:
 			l.grid(row=15+sensor,column=2)
 			self.sensor_readouts.append(l)
 
+		#button to control monitor running/paused
 		self.monitor_controls_frame = LabelFrame(self.chip_fixture_monitor_frame,borderwidth=0,padx=10,pady=10)
 		self.monitor_controls_frame.grid(row=50,column=0,columnspan=5,padx=10,pady=10,sticky=N)
-		button_width = 6
-		self.monitor_start_button = Button(self.monitor_controls_frame,text="Start",command=self.on_start_monitor,
-									height=1,width=button_width).grid(row=0,column=0)
-		self.monitor_stop_button = Button(self.monitor_controls_frame,text="Stop",command=self.on_stop_monitor,
-																	height=1,width=button_width).grid(row=0,column=1)
-		self.monitor_pause_button = Button(self.monitor_controls_frame,text="Pause",command=self.on_pause_monitor,
-																	height=1,width=button_width).grid(row=0,column=2)
+		self.monitor_button_text = StringVar()
+		self.monitor_button_text.set("Begin Display Updates")
+		self.monitor_control_button = Button(self.monitor_controls_frame,command=self.onMonitorcontrol,
+									textvariable=self.monitor_button_text,height=1,width=20).grid(row=0,column=0)
 
-	def create_exit_button(self):
-		exitButton = Button(self.mainPanel, text="Exit", command=self.onExit, height=2,width=10).grid(pady=10)
+	def create_test_controls(self):
+		self.test_controls_frame = LabelFrame(self.tab1_frame,text="Test Controls",padx=10,pady=10)
+		self.test_controls_frame.grid(row=2,column=0,padx=10,pady=10,sticky=N)
+
+		button_width = 11
+		self.test_start_button = Button(self.test_controls_frame,text="Start",command=self.onBeginTest,
+									height=1,width=button_width)
+		self.test_start_button.grid(row=0,column=0)
+		self.test_stop_button = Button(self.test_controls_frame,text="Stop",command=self.onStopTest,
+																	height=1,width=button_width)
+		self.test_stop_button.grid(row=0,column=1)
 
 	def create_menu(self):
 		menubar = Menu(self.root)
@@ -722,11 +812,11 @@ class App:
 		if False:
 			self.t_line.set_data(self.sampleTimes,self.temperatures)
 			print 'got here'
-			self.update_plot()
+			self.updatePlot()
 
 			return self.t_line,
 
-	def update_plot(self):
+	def updatePlot(self):
 		if len(self.temperatures) > 0:
 			self.ax.set_ylim([min(self.temperatures)-1,max(self.temperatures)+1])
 
@@ -746,24 +836,29 @@ class App:
 	def onUpdate(self):
 		if platform.system() == 'Linux':
 
-			if self.monitor_state == 'running':
-				self.read_fixture_measurements()
-								
+			if (self.monitor_state == 'running' or self.testing_state == 'running'):
+				self.readFixtureMeasurements()
 				self.current_sample_number += 1
-				self.samples_since_write += 1
-				if self.samples_since_write == self.samples_before_write:
-					self.write_samples_to_file()
-					self.samples_since_write = 0
 
-				self.update_measurements_display()
-		
-			for monitor in self.mfc_monitors:
-				monitor.update_readings()
-				
+				if self.monitor_state == 'running':
+
+					self.updateMeasurementsDisplay()
+					for monitor in self.mfc_monitors:
+						monitor.update_readings()
+
+				if self.testing_state == 'running':
+
+					self.samples_since_write += 1
+					if self.samples_since_write == self.samples_before_write:
+						self.writeSamplesToFile()
+						self.samples_since_write = 0
+
+					if testDone:
+						self.onStopTest()
 
 			self.root.after(self.sample_interval_msec,self.onUpdate)
 
-	def update_measurements_display(self):
+	def updateMeasurementsDisplay(self):
 		
 		#check for selected fixture
 		selected_fixture = self.selected_fixture_id.get()
@@ -778,23 +873,47 @@ class App:
 			self.sensor_readouts[i]['text'] = "%.1f"%(
 								self.data_containers[selected_fixture]['Res'][self.current_sample_number-1][i])
 
-	def on_start_monitor(self):
-		if self.monitor_state == 'stopped':
+	def onMonitorcontrol(self):
+		
+		if self.monitor_state == 'running':
+			self.monitor_state = 'stopped'
+			self.monitor_button_text.set("Resume Display Updates")
+		
+		elif (self.monitor_state == 'stopped' and self.testing_state == 'stopped'):
+			self.data_containers = self.create_data_containers()
+			self.current_sample_number = 0
+			self.monitor_state = 'running'
+			self.monitor_button_text.set("Pause Display Updates")
+
+	def onBeginTest(self):
+		if self.testing_state == 'stopped':
+			
+			dataQ = Queue()
+			dataQ.put(self.test_completed)
+			dataQ.put(self.mfc_monitors)
+			dataQ.put(self.test_condition_checkboxes)
+			dataQ.put(self.test_condition_times)
+			dataQ.put(self.test_condition_settings)
+			dataQ.put(self.looping_enabled.get())
+			dataQ.put(self.num_loops.get())
+			dataQ.put(self.testNum)
+			
 			self.create_new_outfile()
 			self.current_sample_number = 0
 			self.samples_since_write = 0
 			
 			self.data_containers = self.create_data_containers()
 			
-			self.monitor_state = 'running'
+			global testDone
+			testDone = False
+			self.testing_state = 'running'
+			self.thd = MFC_ControlThread(dataQ)
+			self.thd.start()
 
-	def on_stop_monitor(self):
-		self.monitor_state = 'stopped'
+	def onStopTest(self):
+		self.testing_state = 'stopped'
 		self.outfile.close()
-#		self.print_data()
-
-	def on_pause_monitor(self):
-		self.monitor_state = 'paused'
+		if file_debug: print "Outfile closed."
 		
 	def create_data_containers(self):
 		""" each fixture has a dictionary with keyed lists(5) for temperature,
@@ -812,7 +931,7 @@ class App:
 
 		return data_containers
 
-	def print_data(self):
+	def printDataContainers(self):
 		""" just for testing that all data containers are created correctly and 
 		    populated with the right data"""
 		for fixture in self.data_containers:
@@ -823,6 +942,7 @@ class App:
 	def create_new_outfile(self):
 		time_string = dt.now().strftime("%Y_%m_%d__%H_%M_%S")
 		self.outfile = open(self.outDir + "/" + time_string + "_Test_Data.csv",'w')
+		if debug: print "New outfile opened"
 
 		# write fixture description comments
 		for i in range(len(self.fixture_addresses)):
@@ -846,7 +966,7 @@ class App:
 
 		self.outfile.flush()
 
-	def write_samples_to_file(self):
+	def writeSamplesToFile(self):
 		
 		for i in range(self.samples_before_write,0,-1):
 		
@@ -869,14 +989,14 @@ class App:
 				self.outfile.write("\n")
 		
 		self.outfile.flush()
-		print "write done, outfile flushed"
+		if file_debug: print "write done, outfile flushed"
 
-	def read_fixture_measurements(self):
+	def readFixtureMeasurements(self):
 
 		timestamp_line = dt.now().strftime("%Y_%m_%d__%H_%M_%S")
 		timestamp_line += ","
 
-		self.send_measurement_trigger()
+		self.sendMeasurementTrigger()
 
 		#wait for measurements to complete before reading results
 		time.sleep(float(self.read_delay_msec_after_trigger)/1000.0)
@@ -908,7 +1028,7 @@ class App:
 			#append the list of sensor data
 			self.data_containers[addr]['Res'].append(sensor_data)
 
-	def send_measurement_trigger(self):
+	def sendMeasurementTrigger(self):
 		GPIO.output(GPIO_TRIGGER_CHANNEL,1)
 		time.sleep(self.trigger_width_msec/1000.0)
 		GPIO.output(GPIO_TRIGGER_CHANNEL,0)
@@ -921,9 +1041,6 @@ class App:
 			for mfc in self.mfc_monitors:
 				mfc.close()
 		self.root.quit()
-
-	def onChange(self):
-		pass
 
 
 app=App()
