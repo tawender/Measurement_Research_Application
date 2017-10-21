@@ -20,6 +20,7 @@ import serial
 from datetime import datetime as dt
 from threading import Thread
 from Queue import Queue
+import logging
 
 
 debug=True
@@ -44,14 +45,60 @@ elif platform.system() == 'Linux':
     import pigpio
     import smbus
     bus = smbus.SMBus(1)	#I2C bus
+    
+
+class EventClass:
+	def __init__(self):
+		self.handlers = set()
+		
+	def handle(self, handler):
+		self.handlers.add(handler)
+		return self
+		
+	def unhandle(self, handler):
+		try:
+			self.handlers.remove(handler)
+		except:
+			raise ValueError("Handler is not handling this event, so cannot unhandle it.")
+		return self
+		
+	def fire(self, *args, **kargs):
+		for handler in self.handlers:
+			handler(*args, **kargs)
+	def getHandlerCount(self):
+		return len(self.handlers)
+		
+	__iadd__ = handle
+	__isub__ = unhandle
+	__call__ = fire
+	__len__  = getHandlerCount
+
+
+
+class delayThread(Thread):
+	def __init__(self,interval_msec):
+		Thread.__init__(self)
+		self.interval_msec = interval_msec
+		self.my_event = EventClass()		#creates the event instance
+		
+	def run(self):
+		logging.info("Delay thread started...")
+		start = time.time()
+		now = time.time()
+		while( (now-start) < (self.interval_msec/1000.0) ):
+			time.sleep(0.01)
+			now = time.time()
+			
+		logging.info("Delay thread timer ended... now handler(s) will be called")
+		self.my_event(self.interval_msec)	#this call fires the actual event
+
+
+
 
 
 class MFC_ControlThread(Thread):
 	def __init__(self,q):
 		Thread.__init__(self)
-		
-		#state variable used for file operations
-		self.completed = q.get()
 		
 		#list of MFC displays that can be used to change flow settings
 		self.MFCs = q.get()
@@ -89,7 +136,7 @@ class MFC_ControlThread(Thread):
 			self.num_loops = 1
 
 		if thread_debug:
-			print "***Test Condition Listing***"
+			print "*********Test Condition Listing*********"
 			for j in range(self.num_loops):
 				if self.looping_enabled: print "    Loop #%d"%(j+1)
 				for i in range(len(self.test_condition_flags)):
@@ -98,7 +145,7 @@ class MFC_ControlThread(Thread):
 						print "  interval: %d seconds"%(self.test_condition_times[i])
 						for setting in self.mfc_settings[i]:
 							print "  setting: %s"%(setting)
-			print "******************"
+			print "******************************************"
 
 	def run(self):
 		global testDone
@@ -113,11 +160,14 @@ class MFC_ControlThread(Thread):
 					if thread_debug: print "Setting MFCs for test condition %d"%(i+1)
 					if thread_debug: print "  self.mfc_settings[i]: ",self.mfc_settings[i]
 					for setting_index in range(len(self.mfc_settings[i])):
-						if thread_debug: print "setting index: %d      Changing MFC ID %s to %.2f"%(setting_index,self.
-												MFCs[setting_index].get_id(),float(self.mfc_settings[i][setting_index]))
-						self.MFCs[setting_index].flowController.set_flow_rate(float(self.mfc_settings[i][setting_index]),
-																				verify_flow_change=False)
-					
+						if thread_debug: print "setting index: %d      Changing MFC ID %s to %.2f"%(setting_index,
+												self.MFCs[setting_index].get_id(),float(self.mfc_settings[i][setting_index]))
+						try:
+							self.MFCs[setting_index].flowController.set_flow_rate(float(self.mfc_settings[i][setting_index]),
+																					verify_flow_change=False)
+						except Exception as e:
+							print "Exception attempting to set flow rate on address %s"%(self.MFCs[setting_index].get_id())
+
 					#find start time
 					start = time.time()
 					
@@ -125,7 +175,7 @@ class MFC_ControlThread(Thread):
 					#loop until this test condition time has elapsed
 					now = time.time()
 					while ( (now - start) < self.test_condition_times[i] and testDone is not 'Halt'):
-						if thread_debug: print "Inside thread, elapsed: %.3f of %.3f"%(now-start,self.test_condition_times[i])
+						if thread_debug: print "Inside thread, elapsed: %.3f of %.0f"%(now-start,self.test_condition_times[i])
 						time.sleep(0.1)
 						now = time.time()
 					if testDone is 'Halt':
@@ -134,9 +184,13 @@ class MFC_ControlThread(Thread):
 						
 					if thread_debug: print "  ...interval completed"
 		if thread_debug: print "Test Completed\n\n"
-		
+
 		#change the state variable so main program knows to close the file
 		testDone = True
+		
+		#set all MFCs flow rate to 0 since test completed
+		for MFC in self.MFCs:
+			MFC.flowController.set_flow_rate(0.0,verify_flow_change=False)
 
 
 
@@ -179,6 +233,9 @@ class mfc_display:
 	def close(self):
 		self.flowController.close()
 
+
+
+
 class App:
 	def __init__(self):
 		self.root = Tk()
@@ -194,6 +251,14 @@ class App:
 		self.tab3_frame = Frame(self.tabs)
 
 		self.readConfigFile()
+		
+		if self.logging_enabled:
+			import logging
+			time_string = dt.now().strftime("%Y-%m-%d__%H_%M_%S")
+			fname = "/MeasurementSystemEventLog_"+time_string+".txt"
+			logging.basicConfig(format='%(asctime)s %(levelname)s:%(message)s',
+										filename=self.logfile_path+fname,level=logging.DEBUG)
+			logging.info("Log File Created")
 		self.searchI2Cdevices()
 		self.create_chip_fixture_instances()
 		self.searchMFCdevices()
@@ -236,9 +301,6 @@ class App:
 
 		self.onUpdate()
 		
-#		t=MFC_ControlThread(15)
-#		t.start()
-		
 		self.root.title("NEA Sensor Research")
 		self.root.geometry('1350x940')
 		self.root.mainloop()
@@ -252,10 +314,11 @@ class App:
 		self.MFC_com_port = self.config_file.get('MFC Controls','MFC COM port')
 		self.MFC_baud_rate = int(self.config_file.get('MFC Controls','MFC baud rate'))
 		self.MFC_search_delay = float(self.config_file.get('MFC Controls','MFC search response delay msec')) / 1000.0
+		self.MFC_timeout = float(self.config_file.get('MFC Controls','MFC response timeout seconds'))
 
 		self.sample_interval_msec = int(self.config_file.get('Measurement Controls','sample interval msec'))
 		self.trigger_width_msec = int(self.config_file.get('Measurement Controls','measurement trigger pulse width msec'))
-		self.read_delay_msec_after_trigger = int(self.config_file.get('Measurement Controls','msec delay after trigger'))
+		self.read_delay_msec_after_trigger = int(self.config_file.get('Measurement Controls','msec delay between trigger and read'))
 		
 		self.DAC1_voltage_min_setting = float(self.config_file.get('Circuit Controls','DAC1 min voltage setting'))
 		self.DAC1_voltage_max_setting = float(self.config_file.get('Circuit Controls','DAC1 max voltage setting'))
@@ -275,24 +338,35 @@ class App:
 		self.samples_before_write = int(self.config_file.get('Output','samples before write'))
 
 		self.num_comments = int(self.config_file.get('User Input','number of comments'))
-		
+
 		self.num_test_conditions = int(self.config_file.get('Test Controls','number of test conditions'))
 		self.num_sensors_on_chip = int(self.config_file.get('Test Controls','number of sensors on chip'))
 
+		self.logging_enabled = self.config_file.get('Logging','enable logging')
+		self.logfile_path = self.config_file.get('Logging','logfile path')
+
 	def searchI2Cdevices(self):
 		if debug: print "Searching for connected I2C devices..."
+		logging.info("********************************************************")
+		logging.info("*********Searching for connected I2C devices************")
 		self.fixture_addresses = []
 		self.fixture_addr_strings = []
 		for id in range(128):
 			try:
+				logging.info("Searching I2C address %#x"%id)
 				bus.write_quick(id)
+				logging.info("I2C address %#x acknowledged by slave"%id)
 				self.fixture_addresses.append(id)
-				self.fixture_addr_strings.append("ID: %#x"%(id))
+				self.fixture_addr_strings.append("ID: %#0x"%(id))
 			except:
-				pass
+				logging.info("No ACK from %#0x"%(id))
 			
 		if len(self.fixture_addresses) == 0:
 			self.fixture_addr_strings.append("None")
+			
+		logging.info("Done searching for I2C devices. Valid ACK from IDs: %s"%(self.fixture_addr_strings))
+		logging.info("********************************************************")
+		for i in range(3): logging.info("")
 			
 		if debug: print "Found I2C device addresses: ",self.fixture_addr_strings
 		
@@ -303,6 +377,8 @@ class App:
 
 	def searchMFCdevices(self):
 		if debug: print "Searching for connected MFCs..."
+		logging.info("********************************************************")
+		logging.info("*********Searching for connected MFC devices************")
 		ser = serial.Serial(self.MFC_com_port, self.MFC_baud_rate, timeout=0.1)
 		self.found_MFC_IDs = []
 
@@ -311,15 +387,22 @@ class App:
 			if MFCdebug: print "searching %s: "%(chr(id))
 			ser.flushInput()
 			ser.flushOutput()
+			logging.info("Trying address %s"%(chr(id)))
 			ser.write("%s\r"%(chr(id)))
 			time.sleep(self.MFC_search_delay)
 			ret=ser.read(1)
+			logging.info("MFC data returned: %s"%ret)
 			if MFCdebug: print "  %s"%(ret)
 			if ret==chr(id):
 				self.found_MFC_IDs.append(chr(id))
+				logging.info("%s added to list of found IDs"%(chr(id)))
 
 		self.num_connected_MFCs = len(self.found_MFC_IDs)
 		if debug: print "Found MFCs: ",self.found_MFC_IDs
+		
+		logging.info("Done searching for MFC devices, found %s"%(self.found_MFC_IDs))
+		logging.info("********************************************************")
+		for i in range(3): logging.info("")
 		
 		return self.found_MFC_IDs
 		
@@ -328,7 +411,7 @@ class App:
 			self.connected_MFCs = []
 			
 			for mfc_id in self.found_MFC_IDs:
-				mfc = alicat.FlowController(address=mfc_id,baud=self.MFC_baud_rate)
+				mfc = alicat.FlowController(address=mfc_id,baud=self.MFC_baud_rate,timeout=self.MFC_timeout)
 				self.connected_MFCs.append(mfc)
 				
 	def onNumLoops_click(self):
@@ -774,7 +857,7 @@ class App:
 		self.test_controls_frame.grid(row=2,column=0,padx=10,pady=10,sticky=N)
 
 		button_width = 11
-		self.test_start_button = Button(self.test_controls_frame,text="Start",command=self.onBeginTest,
+		self.test_start_button = Button(self.test_controls_frame,text="Start",command=self.onStartTest,
 									height=1,width=button_width)
 		self.test_start_button.grid(row=0,column=0)
 		self.test_stop_button = Button(self.test_controls_frame,text="Stop",command=self.onStopTest,
@@ -795,7 +878,6 @@ class App:
 		
 		self.progressBar = ttk.Progressbar(self.statusBar_frame,orient='horizontal',length=300,mode='determinate')
 		self.progressBar.grid(row=5,column=10,padx=5,sticky=E)
-		self.progressBar['maximum'] = 1000
 		
 	def calculateTestTime(self):
 		testSeconds = 0
@@ -804,8 +886,10 @@ class App:
 				testSeconds += self.test_condition_times[i].get()
 		if self.looping_enabled.get():
 			testSeconds *= self.num_loops.get()
-		self.progressBar['maximum'] = testSeconds
+		self.progressBar['maximum'] = testSeconds * 100
 		print "total test time: %d seconds"%(testSeconds)
+		
+		return testSeconds
 
 	def create_menu(self):
 		menubar = Menu(self.root)
@@ -880,28 +964,12 @@ class App:
 		if platform.system() == 'Linux':
 
 			if (self.monitor_state == 'running' or self.testing_state == 'running'):
-				self.readFixtureMeasurements()
-				self.current_sample_number += 1
-
-				if self.monitor_state == 'running':
-
-					self.updateMeasurementsDisplay()
-					for monitor in self.mfc_monitors:
-						monitor.update_readings()
-
-				if self.testing_state == 'running':
-					self.elapsed_seconds += self.sample_interval_msec / 1000
-					self.progressBar['value'] = self.elapsed_seconds
-					print "progress: %d of %d"%(self.elapsed_seconds,self.progressBar['maximum'])
-
-					self.samples_since_write += 1
-					if self.samples_since_write == self.samples_before_write:
-						self.writeSamplesToFile()
-						self.samples_since_write = 0
-
-					if testDone:
-						self.progressBar['value'] = self.progressBar['maximum']
-						self.onStopTest()
+				logging.info("***************** Next Sample Point ***************")
+				self.setMeasurementTriggerHigh()
+				
+				delay_timer = delayThread(interval_msec=400)
+				delay_timer.my_event += self.readFixturesAndUpdate
+				delay_timer.start()
 
 			self.root.after(self.sample_interval_msec,self.onUpdate)
 
@@ -932,11 +1000,12 @@ class App:
 			self.monitor_state = 'running'
 			self.monitor_button_text.set("Pause Screen Updates")
 
-	def onBeginTest(self):
+	def onStartTest(self):
 		if self.testing_state == 'stopped':
 			
+			logging.info("Start Test button clicked")
+
 			dataQ = Queue()
-			dataQ.put(self.test_completed)
 			dataQ.put(self.mfc_monitors)
 			dataQ.put(self.test_condition_checkboxes)
 			dataQ.put(self.test_condition_times)
@@ -951,8 +1020,8 @@ class App:
 			self.elapsed_seconds = 0
 			
 			self.data_containers = self.create_data_containers()
-			self.calculateTestTime()
-			self.progressBar['value'] = self.elapsed_seconds
+			self.testSeconds = self.calculateTestTime()
+			self.progressBar['value'] = 0
 			
 			global testDone
 			testDone = False
@@ -961,6 +1030,7 @@ class App:
 			self.thd.start()
 
 	def onStopTest(self):
+		logging.info("Stop Test button clicked")
 		self.testing_state = 'stopped'
 		self.outfile.close()
 		if file_debug: print "Outfile closed."
@@ -1042,13 +1112,37 @@ class App:
 		
 		self.outfile.flush()
 		if file_debug: print "write done, outfile flushed"
+		
+	def readFixturesAndUpdate(self, args):
+		self.setMeasurementTriggerLow()
+		
+		self.readFixtureMeasurements()
+		self.current_sample_number += 1
+
+		if self.monitor_state == 'running':
+
+			self.updateMeasurementsDisplay()
+			for monitor in self.mfc_monitors:
+				monitor.update_readings()
+
+		if self.testing_state == 'running':
+			self.elapsed_seconds += self.sample_interval_msec / 1000.0
+			self.progressBar['value'] = self.elapsed_seconds * 100
+			print "inside tkinter app(): %dsec of %dsec"%(self.elapsed_seconds,self.testSeconds)
+
+			self.samples_since_write += 1
+			if self.samples_since_write == self.samples_before_write:
+				self.writeSamplesToFile()
+				self.samples_since_write = 0
+
+			if testDone:
+				self.progressBar['value'] = self.progressBar['maximum']
+				self.onStopTest()
 
 	def readFixtureMeasurements(self):
 
 		timestamp_line = dt.now().strftime("%Y_%m_%d__%H_%M_%S")
 		timestamp_line += ","
-
-		self.sendMeasurementTrigger()
 
 		#wait for measurements to complete before reading results
 		time.sleep(float(self.read_delay_msec_after_trigger)/1000.0)
@@ -1080,10 +1174,15 @@ class App:
 			#append the list of sensor data
 			self.data_containers[addr]['Res'].append(sensor_data)
 
-	def sendMeasurementTrigger(self):
+	def setMeasurementTriggerHigh(self):
 		GPIO.output(GPIO_TRIGGER_CHANNEL,1)
-		time.sleep(self.trigger_width_msec/1000.0)
+		print "Trigger Set High"
+		logging.info("Trigger output voltage set high")
+
+	def setMeasurementTriggerLow(self):
 		GPIO.output(GPIO_TRIGGER_CHANNEL,0)
+		print "Trigger Set Low"
+		logging.info("Trigger output voltage set low")
 
 	def onExit(self):
 		if platform.system() == 'Linux':

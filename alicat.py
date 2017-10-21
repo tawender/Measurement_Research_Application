@@ -5,6 +5,7 @@ Distributed under the GNU General Public License v2
 Copyright (C) 2015 NuMat Technologies
 """
 import serial
+import logging
 
 
 class FlowMeter(object):
@@ -13,14 +14,21 @@ class FlowMeter(object):
     This communicates with the flow meter over a USB or RS-232/RS-485
     connection using pyserial.
     """
-    def __init__(self, port='/dev/ttyUSB0', address='A',baud=19200):
+    def __init__(self, port='/dev/ttyUSB0', address='A',baud=19200,timeout=1.0):
         """Connects this driver with the appropriate USB / serial port.
         Args:
             port: The serial port. Default '/dev/ttyUSB0'.
             address: The Alicat-specified address, A-Z. Default 'A'.
         """
         self.address = address
-        self.connection = serial.Serial(port, baud, timeout=1.0)
+        self.timeout = timeout
+        logging.info("opening instance of serial port %s(baud:%d,timeout:%.2f) for MFC id: %s"%(
+                            port,baud,timeout,self.address))
+        try:
+            self.connection = serial.Serial(port, baud, timeout=self.timeout)
+        except Exception as e:
+            logging.error("Couldd not open serial port for MFC addr: %s")%(self.address)
+            raise e
         self.keys = ['pressure', 'temperature', 'volumetric_flow', 'mass_flow',
                      'flow_setpoint', 'gas']
         self.gases = ['Air', 'Ar', 'CH4', 'CO', 'CO2', 'C2H6', 'H2', 'He',
@@ -75,7 +83,7 @@ class FlowMeter(object):
             line = self._write_and_read(command, retries)
             return self._decode_line(line)
         except Exception as e:
-            print "failed command: ",command_line
+            print "failed command: ",command
             raise e
                 
     def _decode_line(self, line):
@@ -101,6 +109,7 @@ class FlowMeter(object):
                 'C-75', 'A-75', 'A-25', 'A1025', 'Star29', 'P-5'
         """
         if gas not in self.gases:
+            logging.error("Attempted to set unsupported gas type: %s"%(gas))
             raise ValueError("{} not supported!".format(gas))
         command = '{addr}$${gas}\r'.format(addr=self.address,
                                            gas=self.gases.index(gas))
@@ -117,34 +126,53 @@ class FlowMeter(object):
     def close(self):
         """Closes the serial port. Call this on program termination."""
         self.flush()
+        logging.info("Closing serial connection to MFC addr %s"%(self.address))
         self.connection.close()
 
     def _write_and_read(self, command, retries=2):
         """Writes a command and reads a response from the flow controller."""
         for _ in range(retries+1):
+            logging.info("writing command(MFC addr %s):  %s"%(self.address,command))
             self.connection.write(command.encode('utf-8'))
             line = self._readline()
             if line:
-                return line
-        else:
-            raise IOError("Could not read from flow controller.")
+                logging.info("Received: %s"%(line))
+                return line                
+            else:
+                logging.error("No line read from flow controller(MFC addr %s)"%
+                                            (self.address))
+                raise IOError("Could not read from flow controller.")
 
     def _readline(self):
-        """Reads a line using a custom newline character (CR in this case).
-        Function from http://stackoverflow.com/questions/16470903/
-        pyserial-2-6-specify-end-of-line-in-readline
-        """
-        line = bytearray()
-        while True:
-            c = self.connection.read(1)
-            if c:
-                line += c
-                if line[-1] == ord('\r'):
-                    break
-            else:
-                break
-        return line.decode('utf-8').strip()
+        """ Returns a line of text with any "\r" removed from the text"""
+        line = self.connection.readline()
+        line_items = line.strip()
+        return line_items
 
+    #def _readline(self):
+        #"""Reads a line using a custom newline character (CR in this case).
+        #Function from http://stackoverflow.com/questions/16470903/
+        #pyserial-2-6-specify-end-of-line-in-readline
+        #"""
+        
+        #line = bytearray()
+        #while True:
+            #try:
+                #c = self.connection.read(1)
+            #except Exception as e:
+                #logging.error("Exception reading character from MFC addr: %s")%(self.address)
+                #raise e
+            #if c:
+                #line += c
+                #if line[-1] == ord('\r'):
+                    #break
+            #else:
+                #break
+        #try:
+            #return line.decode('utf-8').strip()
+        #except Exception as e:
+            #logging.error("Exception in [MFC addr: %s]_readline() decoding line: "%(self.address),line)
+            #raise e
 
 class FlowController(FlowMeter):
     """Python driver for [Alicat Flow Controllers](http://www.alicat.com/
@@ -161,12 +189,21 @@ class FlowController(FlowMeter):
         """
         command = '{addr}S{flow:.2f}\r'.format(addr=self.address, flow=flow)
         line = self._write_and_read(command, retries)
-        # The alicat also responds with a line of data, which we should read
-        #self._readline()
-        #ret = self._decode_line(line)
+        items=line.split()
+        if items[0] == self.address:
+            readback_flow = items[5]
+        elif items[1] == self.address:
+            readback_flow = items[0]
+        else:
+            raise IOError("Could not find expected address of flow controller")
         if verify_flow_change:
-            if abs(float(line) - flow) > 0.01:
+            if abs(float(readback_flow) - flow) > 0.01:
+                logging.error("device response[%s] does not match flow rate that was set[%.2f]"%
+                                (readback_flow,flow))
                 raise IOError("Could not set flow.")
+            else:
+                logging.info("New flow rate setting[%s] matches command sent[%.2f]"%
+                                (readback_flow,flow))
 
 
 def command_line():
