@@ -314,12 +314,12 @@ class App:
 		self.MFC_com_port = self.config_file.get('MFC Controls','MFC COM port')
 		self.MFC_baud_rate = int(self.config_file.get('MFC Controls','MFC baud rate'))
 		self.MFC_search_delay = float(self.config_file.get('MFC Controls','MFC search response delay msec')) / 1000.0
-		self.MFC_timeout = float(self.config_file.get('MFC Controls','MFC response timeout seconds'))
+		self.MFC_timeout = float(self.config_file.get('MFC Controls','MFC comm response timeout seconds'))
 
 		self.sample_interval_msec = int(self.config_file.get('Measurement Controls','sample interval msec'))
 		self.trigger_width_msec = int(self.config_file.get('Measurement Controls','measurement trigger pulse width msec'))
-		self.read_delay_msec_after_trigger = int(self.config_file.get('Measurement Controls','msec delay between trigger and read'))
-		
+		self.read_delay_msec_after_trigger = int(self.config_file.get('Measurement Controls','delay between trigger and read msec'))
+
 		self.DAC1_voltage_min_setting = float(self.config_file.get('Circuit Controls','DAC1 min voltage setting'))
 		self.DAC1_voltage_max_setting = float(self.config_file.get('Circuit Controls','DAC1 max voltage setting'))
 		self.DAC2_voltage_min_setting = float(self.config_file.get('Circuit Controls','DAC2 min voltage setting'))
