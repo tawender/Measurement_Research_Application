@@ -167,6 +167,7 @@ class MFC_ControlThread(Thread):
 																					verify_flow_change=False)
 						except Exception as e:
 							print "Exception attempting to set flow rate on address %s"%(self.MFCs[setting_index].get_id())
+							raise e
 
 					#find start time
 					start = time.time()
@@ -1001,10 +1002,12 @@ class App:
 			self.monitor_button_text.set("Pause Screen Updates")
 
 	def onStartTest(self):
+		logging.info("User clicked 'Start Test' button")
+		self.startTest()
+
+	def startTest(self):
 		if self.testing_state == 'stopped':
 			
-			logging.info("Start Test button clicked")
-
 			dataQ = Queue()
 			dataQ.put(self.mfc_monitors)
 			dataQ.put(self.test_condition_checkboxes)
@@ -1028,9 +1031,12 @@ class App:
 			self.testing_state = 'running'
 			self.thd = MFC_ControlThread(dataQ)
 			self.thd.start()
-
+			
 	def onStopTest(self):
-		logging.info("Stop Test button clicked")
+		logging.info("User clicked 'Stop Test' button")
+		self.stopTest()
+
+	def stopTest(self):
 		self.testing_state = 'stopped'
 		self.outfile.close()
 		if file_debug: print "Outfile closed."
@@ -1137,7 +1143,7 @@ class App:
 
 			if testDone:
 				self.progressBar['value'] = self.progressBar['maximum']
-				self.onStopTest()
+				self.stopTest()
 
 	def readFixtureMeasurements(self):
 
@@ -1185,6 +1191,7 @@ class App:
 		logging.info("Trigger output voltage set low")
 
 	def onExit(self):
+		logging.info("Exiting Application")
 		if platform.system() == 'Linux':
 			print 'exiting...'
 			GPIO.cleanup()

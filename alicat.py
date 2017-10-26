@@ -90,7 +90,7 @@ class FlowMeter(object):
         spl = line.split()
         address, values = spl[0], spl[1:]
         if address != self.address:
-            print "line: ",line
+            logging.info("Flow controller address mismatch, addr: %s != self.addr: %s"%(address,self.address))
             raise ValueError("Flow controller address mismatch. addr: %s != self.addr: %s"%(address,self.address))
         if len(values) == 5 and len(self.keys) == 6:
             del self.keys[-2]
@@ -144,35 +144,35 @@ class FlowMeter(object):
                 raise IOError("Could not read from flow controller.")
 
     def _readline(self):
-        """ Returns a line of text with any "\r" removed from the text"""
-        line = self.connection.readline()
-        line_items = line.strip()
-        return line_items
-
-    #def _readline(self):
-        #"""Reads a line using a custom newline character (CR in this case).
-        #Function from http://stackoverflow.com/questions/16470903/
-        #pyserial-2-6-specify-end-of-line-in-readline
-        #"""
-        
-        #line = bytearray()
-        #while True:
-            #try:
-                #c = self.connection.read(1)
-            #except Exception as e:
-                #logging.error("Exception reading character from MFC addr: %s")%(self.address)
-                #raise e
-            #if c:
-                #line += c
-                #if line[-1] == ord('\r'):
-                    #break
-            #else:
-                #break
-        #try:
-            #return line.decode('utf-8').strip()
-        #except Exception as e:
-            #logging.error("Exception in [MFC addr: %s]_readline() decoding line: "%(self.address),line)
-            #raise e
+        """Reads a line using a custom newline character (CR in this case).
+        Function from http://stackoverflow.com/questions/16470903/
+        pyserial-2-6-specify-end-of-line-in-readline
+        """
+        line = bytearray()
+        while True:
+            try:
+                c = self.connection.read(1)
+            except Exception as e:
+                logging.error("Exception reading character from MFC addr: %s")%(self.address)
+                raise e
+            if c:
+                line += c
+                if line[-1] == ord('\r'):
+                    #check for a returned line consisting of a single number
+                    if len(line.strip().split()) == 1:
+                        print "Getting rid of this number"
+                        logging.info("Discarding line with single setpoint returned: %s"%(line.decode('utf-8').strip()))
+                        line = bytearray()
+                    else:
+                        break
+            else:
+                break
+        try:
+            line_elements = line.decode('utf-8').strip()
+            return line_elements
+        except Exception as e:
+            logging.error("Exception in [MFC addr: %s]_readline() decoding line: "%(self.address),line)
+            raise e
 
 class FlowController(FlowMeter):
     """Python driver for [Alicat Flow Controllers](http://www.alicat.com/
@@ -189,21 +189,23 @@ class FlowController(FlowMeter):
         """
         command = '{addr}S{flow:.2f}\r'.format(addr=self.address, flow=flow)
         line = self._write_and_read(command, retries)
-        items=line.split()
-        if items[0] == self.address:
-            readback_flow = items[5]
-        elif items[1] == self.address:
-            readback_flow = items[0]
-        else:
-            raise IOError("Could not find expected address of flow controller")
+        
+        if line[0] != self.address:
+            logging.error("Expected address(%s) not found in returned line: %s"%(
+                                self.address,line))
+            #raise an error here
+            return
+            
         if verify_flow_change:
-            if abs(float(readback_flow) - flow) > 0.01:
+            #convert line into dictionary of returned data
+            returned_values = self._decode_line(line)
+            
+            if abs(float(returned_values['flow_setpoint']) - flow) > 0.01:
                 logging.error("device response[%s] does not match flow rate that was set[%.2f]"%
-                                (readback_flow,flow))
+                                    (returned_values['flow_setpoint'],flow))
                 raise IOError("Could not set flow.")
-            else:
-                logging.info("New flow rate setting[%s] matches command sent[%.2f]"%
-                                (readback_flow,flow))
+                    
+        
 
 
 def command_line():
