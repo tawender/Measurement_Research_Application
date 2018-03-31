@@ -176,11 +176,27 @@ class MFC_ControlThread(Thread):
 					#loop until this test condition time has elapsed
 					now = time.time()
 					while ( (now - start) < self.test_condition_times[i] and testDone is not 'Halt'):
-						if thread_debug: print "Inside thread, elapsed: %.3f of %.0f"%(now-start,self.test_condition_times[i])
-						time.sleep(0.1)
-						now = time.time()
+						
+						#***************************************************
+						#some kind of status update here
+						
+						
+						#***************************************************
+						
+						
+						#***************************************************
+						#***need test for next measurement to happen here***
+						#if measurement interval exceeded:
+							#indicate in logger
+							#trigger set high
+							#trigger delay thread started(event will set trigger low)
+							#measurement delay thread started(event will take measurements)
+							#increment next measurement time
+						#***************************************************
+						
+						
 					if testDone is 'Halt':
-						if thread_debug: print "User halted test"
+						logging.info("Test halted by user")
 						return
 						
 					if thread_debug: print "  ...interval completed"
@@ -302,7 +318,7 @@ class App:
 
 		self.onUpdate()
 		
-		self.root.title("NEA Sensor Research")
+		self.root.title("Sensor Research Application")
 		self.root.geometry('1350x940')
 		self.root.mainloop()
 
@@ -1034,14 +1050,14 @@ class App:
 			
 	def onStopTest(self):
 		logging.info("User clicked 'Stop Test' button")
+		global testDone
+		testDone = 'Halt'
 		self.stopTest()
 
 	def stopTest(self):
 		self.testing_state = 'stopped'
 		self.outfile.close()
 		if file_debug: print "Outfile closed."
-		global testDone
-		testDone = 'Halt'
 		
 	def create_data_containers(self):
 		""" each fixture has a dictionary with keyed lists(5) for temperature,
@@ -1147,7 +1163,7 @@ class App:
 
 	def readFixtureMeasurements(self):
 
-		timestamp_line = dt.now().strftime("%Y_%m_%d__%H_%M_%S")
+		timestamp_line = dt.now().strftime("%Y_%m_%d__%H_%M_%S.%f")
 		timestamp_line += ","
 
 		#wait for measurements to complete before reading results

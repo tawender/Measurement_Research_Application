@@ -1,0 +1,393 @@
+2017-10-25 23:16:57,646 INFO:Log File Created
+2017-10-25 23:16:57,646 INFO:********************************************************
+2017-10-25 23:16:57,647 INFO:*********Searching for connected I2C devices************
+2017-10-25 23:16:57,647 INFO:Searching I2C address 0x0
+2017-10-25 23:16:57,648 INFO:No ACK from 0x0
+2017-10-25 23:16:57,648 INFO:Searching I2C address 0x1
+2017-10-25 23:16:57,648 INFO:No ACK from 0x1
+2017-10-25 23:16:57,648 INFO:Searching I2C address 0x2
+2017-10-25 23:16:57,649 INFO:No ACK from 0x2
+2017-10-25 23:16:57,649 INFO:Searching I2C address 0x3
+2017-10-25 23:16:57,649 INFO:No ACK from 0x3
+2017-10-25 23:16:57,650 INFO:Searching I2C address 0x4
+2017-10-25 23:16:57,650 INFO:No ACK from 0x4
+2017-10-25 23:16:57,650 INFO:Searching I2C address 0x5
+2017-10-25 23:16:57,651 INFO:No ACK from 0x5
+2017-10-25 23:16:57,651 INFO:Searching I2C address 0x6
+2017-10-25 23:16:57,651 INFO:No ACK from 0x6
+2017-10-25 23:16:57,651 INFO:Searching I2C address 0x7
+2017-10-25 23:16:57,652 INFO:No ACK from 0x7
+2017-10-25 23:16:57,652 INFO:Searching I2C address 0x8
+2017-10-25 23:16:57,652 INFO:No ACK from 0x8
+2017-10-25 23:16:57,653 INFO:Searching I2C address 0x9
+2017-10-25 23:16:57,653 INFO:No ACK from 0x9
+2017-10-25 23:16:57,653 INFO:Searching I2C address 0xa
+2017-10-25 23:16:57,654 INFO:No ACK from 0xa
+2017-10-25 23:16:57,654 INFO:Searching I2C address 0xb
+2017-10-25 23:16:57,654 INFO:No ACK from 0xb
+2017-10-25 23:16:57,654 INFO:Searching I2C address 0xc
+2017-10-25 23:16:57,655 INFO:No ACK from 0xc
+2017-10-25 23:16:57,655 INFO:Searching I2C address 0xd
+2017-10-25 23:16:57,656 INFO:No ACK from 0xd
+2017-10-25 23:16:57,656 INFO:Searching I2C address 0xe
+2017-10-25 23:16:57,656 INFO:No ACK from 0xe
+2017-10-25 23:16:57,656 INFO:Searching I2C address 0xf
+2017-10-25 23:16:57,657 INFO:No ACK from 0xf
+2017-10-25 23:16:57,657 INFO:Searching I2C address 0x10
+2017-10-25 23:16:57,658 INFO:No ACK from 0x10
+2017-10-25 23:16:57,658 INFO:Searching I2C address 0x11
+2017-10-25 23:16:57,658 INFO:No ACK from 0x11
+2017-10-25 23:16:57,659 INFO:Searching I2C address 0x12
+2017-10-25 23:16:57,659 INFO:No ACK from 0x12
+2017-10-25 23:16:57,660 INFO:Searching I2C address 0x13
+2017-10-25 23:16:57,660 INFO:No ACK from 0x13
+2017-10-25 23:16:57,661 INFO:Searching I2C address 0x14
+2017-10-25 23:16:57,661 INFO:No ACK from 0x14
+2017-10-25 23:16:57,662 INFO:Searching I2C address 0x15
+2017-10-25 23:16:57,662 INFO:No ACK from 0x15
+2017-10-25 23:16:57,662 INFO:Searching I2C address 0x16
+2017-10-25 23:16:57,663 INFO:No ACK from 0x16
+2017-10-25 23:16:57,663 INFO:Searching I2C address 0x17
+2017-10-25 23:16:57,664 INFO:No ACK from 0x17
+2017-10-25 23:16:57,664 INFO:Searching I2C address 0x18
+2017-10-25 23:16:57,665 INFO:No ACK from 0x18
+2017-10-25 23:16:57,665 INFO:Searching I2C address 0x19
+2017-10-25 23:16:57,666 INFO:No ACK from 0x19
+2017-10-25 23:16:57,666 INFO:Searching I2C address 0x1a
+2017-10-25 23:16:57,667 INFO:No ACK from 0x1a
+2017-10-25 23:16:57,667 INFO:Searching I2C address 0x1b
+2017-10-25 23:16:57,667 INFO:No ACK from 0x1b
+2017-10-25 23:16:57,668 INFO:Searching I2C address 0x1c
+2017-10-25 23:16:57,668 INFO:No ACK from 0x1c
+2017-10-25 23:16:57,668 INFO:Searching I2C address 0x1d
+2017-10-25 23:16:57,669 INFO:No ACK from 0x1d
+2017-10-25 23:16:57,669 INFO:Searching I2C address 0x1e
+2017-10-25 23:16:57,669 INFO:No ACK from 0x1e
+2017-10-25 23:16:57,669 INFO:Searching I2C address 0x1f
+2017-10-25 23:16:57,670 INFO:No ACK from 0x1f
+2017-10-25 23:16:57,670 INFO:Searching I2C address 0x20
+2017-10-25 23:16:57,670 INFO:No ACK from 0x20
+2017-10-25 23:16:57,671 INFO:Searching I2C address 0x21
+2017-10-25 23:16:57,671 INFO:No ACK from 0x21
+2017-10-25 23:16:57,671 INFO:Searching I2C address 0x22
+2017-10-25 23:16:57,672 INFO:No ACK from 0x22
+2017-10-25 23:16:57,672 INFO:Searching I2C address 0x23
+2017-10-25 23:16:57,672 INFO:No ACK from 0x23
+2017-10-25 23:16:57,672 INFO:Searching I2C address 0x24
+2017-10-25 23:16:57,673 INFO:No ACK from 0x24
+2017-10-25 23:16:57,673 INFO:Searching I2C address 0x25
+2017-10-25 23:16:57,674 INFO:No ACK from 0x25
+2017-10-25 23:16:57,674 INFO:Searching I2C address 0x26
+2017-10-25 23:16:57,674 INFO:No ACK from 0x26
+2017-10-25 23:16:57,674 INFO:Searching I2C address 0x27
+2017-10-25 23:16:57,675 INFO:No ACK from 0x27
+2017-10-25 23:16:57,675 INFO:Searching I2C address 0x28
+2017-10-25 23:16:57,676 INFO:No ACK from 0x28
+2017-10-25 23:16:57,676 INFO:Searching I2C address 0x29
+2017-10-25 23:16:57,677 INFO:No ACK from 0x29
+2017-10-25 23:16:57,678 INFO:Searching I2C address 0x2a
+2017-10-25 23:16:57,678 INFO:No ACK from 0x2a
+2017-10-25 23:16:57,679 INFO:Searching I2C address 0x2b
+2017-10-25 23:16:57,679 INFO:No ACK from 0x2b
+2017-10-25 23:16:57,680 INFO:Searching I2C address 0x2c
+2017-10-25 23:16:57,680 INFO:No ACK from 0x2c
+2017-10-25 23:16:57,680 INFO:Searching I2C address 0x2d
+2017-10-25 23:16:57,681 INFO:No ACK from 0x2d
+2017-10-25 23:16:57,681 INFO:Searching I2C address 0x2e
+2017-10-25 23:16:57,682 INFO:No ACK from 0x2e
+2017-10-25 23:16:57,682 INFO:Searching I2C address 0x2f
+2017-10-25 23:16:57,683 INFO:No ACK from 0x2f
+2017-10-25 23:16:57,683 INFO:Searching I2C address 0x30
+2017-10-25 23:16:57,683 INFO:No ACK from 0x30
+2017-10-25 23:16:57,684 INFO:Searching I2C address 0x31
+2017-10-25 23:16:57,684 INFO:No ACK from 0x31
+2017-10-25 23:16:57,685 INFO:Searching I2C address 0x32
+2017-10-25 23:16:57,685 INFO:No ACK from 0x32
+2017-10-25 23:16:57,686 INFO:Searching I2C address 0x33
+2017-10-25 23:16:57,686 INFO:No ACK from 0x33
+2017-10-25 23:16:57,686 INFO:Searching I2C address 0x34
+2017-10-25 23:16:57,687 INFO:No ACK from 0x34
+2017-10-25 23:16:57,687 INFO:Searching I2C address 0x35
+2017-10-25 23:16:57,688 INFO:No ACK from 0x35
+2017-10-25 23:16:57,688 INFO:Searching I2C address 0x36
+2017-10-25 23:16:57,689 INFO:No ACK from 0x36
+2017-10-25 23:16:57,689 INFO:Searching I2C address 0x37
+2017-10-25 23:16:57,690 INFO:No ACK from 0x37
+2017-10-25 23:16:57,690 INFO:Searching I2C address 0x38
+2017-10-25 23:16:57,691 INFO:No ACK from 0x38
+2017-10-25 23:16:57,691 INFO:Searching I2C address 0x39
+2017-10-25 23:16:57,692 INFO:No ACK from 0x39
+2017-10-25 23:16:57,692 INFO:Searching I2C address 0x3a
+2017-10-25 23:16:57,693 INFO:No ACK from 0x3a
+2017-10-25 23:16:57,693 INFO:Searching I2C address 0x3b
+2017-10-25 23:16:57,694 INFO:No ACK from 0x3b
+2017-10-25 23:16:57,694 INFO:Searching I2C address 0x3c
+2017-10-25 23:16:57,695 INFO:No ACK from 0x3c
+2017-10-25 23:16:57,695 INFO:Searching I2C address 0x3d
+2017-10-25 23:16:57,696 INFO:No ACK from 0x3d
+2017-10-25 23:16:57,697 INFO:Searching I2C address 0x3e
+2017-10-25 23:16:57,699 INFO:No ACK from 0x3e
+2017-10-25 23:16:57,700 INFO:Searching I2C address 0x3f
+2017-10-25 23:16:57,700 INFO:No ACK from 0x3f
+2017-10-25 23:16:57,701 INFO:Searching I2C address 0x40
+2017-10-25 23:16:57,701 INFO:No ACK from 0x40
+2017-10-25 23:16:57,701 INFO:Searching I2C address 0x41
+2017-10-25 23:16:57,702 INFO:No ACK from 0x41
+2017-10-25 23:16:57,702 INFO:Searching I2C address 0x42
+2017-10-25 23:16:57,702 INFO:No ACK from 0x42
+2017-10-25 23:16:57,703 INFO:Searching I2C address 0x43
+2017-10-25 23:16:57,703 INFO:No ACK from 0x43
+2017-10-25 23:16:57,703 INFO:Searching I2C address 0x44
+2017-10-25 23:16:57,704 INFO:No ACK from 0x44
+2017-10-25 23:16:57,704 INFO:Searching I2C address 0x45
+2017-10-25 23:16:57,704 INFO:No ACK from 0x45
+2017-10-25 23:16:57,704 INFO:Searching I2C address 0x46
+2017-10-25 23:16:57,705 INFO:No ACK from 0x46
+2017-10-25 23:16:57,705 INFO:Searching I2C address 0x47
+2017-10-25 23:16:57,706 INFO:No ACK from 0x47
+2017-10-25 23:16:57,706 INFO:Searching I2C address 0x48
+2017-10-25 23:16:57,706 INFO:No ACK from 0x48
+2017-10-25 23:16:57,707 INFO:Searching I2C address 0x49
+2017-10-25 23:16:57,707 INFO:No ACK from 0x49
+2017-10-25 23:16:57,707 INFO:Searching I2C address 0x4a
+2017-10-25 23:16:57,708 INFO:No ACK from 0x4a
+2017-10-25 23:16:57,708 INFO:Searching I2C address 0x4b
+2017-10-25 23:16:57,708 INFO:No ACK from 0x4b
+2017-10-25 23:16:57,708 INFO:Searching I2C address 0x4c
+2017-10-25 23:16:57,709 INFO:No ACK from 0x4c
+2017-10-25 23:16:57,709 INFO:Searching I2C address 0x4d
+2017-10-25 23:16:57,709 INFO:No ACK from 0x4d
+2017-10-25 23:16:57,710 INFO:Searching I2C address 0x4e
+2017-10-25 23:16:57,710 INFO:No ACK from 0x4e
+2017-10-25 23:16:57,710 INFO:Searching I2C address 0x4f
+2017-10-25 23:16:57,711 INFO:No ACK from 0x4f
+2017-10-25 23:16:57,711 INFO:Searching I2C address 0x50
+2017-10-25 23:16:57,711 INFO:I2C address 0x50 acknowledged by slave
+2017-10-25 23:16:57,712 INFO:Searching I2C address 0x51
+2017-10-25 23:16:57,712 INFO:I2C address 0x51 acknowledged by slave
+2017-10-25 23:16:57,712 INFO:Searching I2C address 0x52
+2017-10-25 23:16:57,713 INFO:No ACK from 0x52
+2017-10-25 23:16:57,713 INFO:Searching I2C address 0x53
+2017-10-25 23:16:57,713 INFO:No ACK from 0x53
+2017-10-25 23:16:57,713 INFO:Searching I2C address 0x54
+2017-10-25 23:16:57,714 INFO:No ACK from 0x54
+2017-10-25 23:16:57,714 INFO:Searching I2C address 0x55
+2017-10-25 23:16:57,714 INFO:No ACK from 0x55
+2017-10-25 23:16:57,715 INFO:Searching I2C address 0x56
+2017-10-25 23:16:57,715 INFO:No ACK from 0x56
+2017-10-25 23:16:57,715 INFO:Searching I2C address 0x57
+2017-10-25 23:16:57,716 INFO:No ACK from 0x57
+2017-10-25 23:16:57,716 INFO:Searching I2C address 0x58
+2017-10-25 23:16:57,716 INFO:No ACK from 0x58
+2017-10-25 23:16:57,717 INFO:Searching I2C address 0x59
+2017-10-25 23:16:57,717 INFO:No ACK from 0x59
+2017-10-25 23:16:57,717 INFO:Searching I2C address 0x5a
+2017-10-25 23:16:57,718 INFO:No ACK from 0x5a
+2017-10-25 23:16:57,718 INFO:Searching I2C address 0x5b
+2017-10-25 23:16:57,718 INFO:No ACK from 0x5b
+2017-10-25 23:16:57,718 INFO:Searching I2C address 0x5c
+2017-10-25 23:16:57,719 INFO:No ACK from 0x5c
+2017-10-25 23:16:57,719 INFO:Searching I2C address 0x5d
+2017-10-25 23:16:57,719 INFO:No ACK from 0x5d
+2017-10-25 23:16:57,720 INFO:Searching I2C address 0x5e
+2017-10-25 23:16:57,720 INFO:No ACK from 0x5e
+2017-10-25 23:16:57,720 INFO:Searching I2C address 0x5f
+2017-10-25 23:16:57,721 INFO:No ACK from 0x5f
+2017-10-25 23:16:57,721 INFO:Searching I2C address 0x60
+2017-10-25 23:16:57,721 INFO:No ACK from 0x60
+2017-10-25 23:16:57,722 INFO:Searching I2C address 0x61
+2017-10-25 23:16:57,722 INFO:No ACK from 0x61
+2017-10-25 23:16:57,722 INFO:Searching I2C address 0x62
+2017-10-25 23:16:57,722 INFO:No ACK from 0x62
+2017-10-25 23:16:57,723 INFO:Searching I2C address 0x63
+2017-10-25 23:16:57,723 INFO:No ACK from 0x63
+2017-10-25 23:16:57,723 INFO:Searching I2C address 0x64
+2017-10-25 23:16:57,724 INFO:No ACK from 0x64
+2017-10-25 23:16:57,724 INFO:Searching I2C address 0x65
+2017-10-25 23:16:57,724 INFO:No ACK from 0x65
+2017-10-25 23:16:57,725 INFO:Searching I2C address 0x66
+2017-10-25 23:16:57,725 INFO:No ACK from 0x66
+2017-10-25 23:16:57,725 INFO:Searching I2C address 0x67
+2017-10-25 23:16:57,726 INFO:No ACK from 0x67
+2017-10-25 23:16:57,726 INFO:Searching I2C address 0x68
+2017-10-25 23:16:57,726 INFO:No ACK from 0x68
+2017-10-25 23:16:57,727 INFO:Searching I2C address 0x69
+2017-10-25 23:16:57,727 INFO:No ACK from 0x69
+2017-10-25 23:16:57,727 INFO:Searching I2C address 0x6a
+2017-10-25 23:16:57,728 INFO:No ACK from 0x6a
+2017-10-25 23:16:57,728 INFO:Searching I2C address 0x6b
+2017-10-25 23:16:57,728 INFO:No ACK from 0x6b
+2017-10-25 23:16:57,728 INFO:Searching I2C address 0x6c
+2017-10-25 23:16:57,729 INFO:No ACK from 0x6c
+2017-10-25 23:16:57,729 INFO:Searching I2C address 0x6d
+2017-10-25 23:16:57,729 INFO:No ACK from 0x6d
+2017-10-25 23:16:57,730 INFO:Searching I2C address 0x6e
+2017-10-25 23:16:57,730 INFO:No ACK from 0x6e
+2017-10-25 23:16:57,730 INFO:Searching I2C address 0x6f
+2017-10-25 23:16:57,731 INFO:No ACK from 0x6f
+2017-10-25 23:16:57,731 INFO:Searching I2C address 0x70
+2017-10-25 23:16:57,731 INFO:No ACK from 0x70
+2017-10-25 23:16:57,732 INFO:Searching I2C address 0x71
+2017-10-25 23:16:57,732 INFO:No ACK from 0x71
+2017-10-25 23:16:57,732 INFO:Searching I2C address 0x72
+2017-10-25 23:16:57,733 INFO:No ACK from 0x72
+2017-10-25 23:16:57,733 INFO:Searching I2C address 0x73
+2017-10-25 23:16:57,733 INFO:No ACK from 0x73
+2017-10-25 23:16:57,733 INFO:Searching I2C address 0x74
+2017-10-25 23:16:57,734 INFO:No ACK from 0x74
+2017-10-25 23:16:57,734 INFO:Searching I2C address 0x75
+2017-10-25 23:16:57,734 INFO:No ACK from 0x75
+2017-10-25 23:16:57,735 INFO:Searching I2C address 0x76
+2017-10-25 23:16:57,735 INFO:No ACK from 0x76
+2017-10-25 23:16:57,735 INFO:Searching I2C address 0x77
+2017-10-25 23:16:57,736 INFO:No ACK from 0x77
+2017-10-25 23:16:57,736 INFO:Searching I2C address 0x78
+2017-10-25 23:16:57,736 INFO:No ACK from 0x78
+2017-10-25 23:16:57,737 INFO:Searching I2C address 0x79
+2017-10-25 23:16:57,737 INFO:No ACK from 0x79
+2017-10-25 23:16:57,737 INFO:Searching I2C address 0x7a
+2017-10-25 23:16:57,738 INFO:No ACK from 0x7a
+2017-10-25 23:16:57,738 INFO:Searching I2C address 0x7b
+2017-10-25 23:16:57,738 INFO:No ACK from 0x7b
+2017-10-25 23:16:57,739 INFO:Searching I2C address 0x7c
+2017-10-25 23:16:57,739 INFO:No ACK from 0x7c
+2017-10-25 23:16:57,739 INFO:Searching I2C address 0x7d
+2017-10-25 23:16:57,740 INFO:No ACK from 0x7d
+2017-10-25 23:16:57,740 INFO:Searching I2C address 0x7e
+2017-10-25 23:16:57,740 INFO:No ACK from 0x7e
+2017-10-25 23:16:57,740 INFO:Searching I2C address 0x7f
+2017-10-25 23:16:57,741 INFO:No ACK from 0x7f
+2017-10-25 23:16:57,741 INFO:Done searching for I2C devices. Valid ACK from IDs: ['ID: 0x50', 'ID: 0x51']
+2017-10-25 23:16:57,741 INFO:********************************************************
+2017-10-25 23:16:57,742 INFO:
+2017-10-25 23:16:57,742 INFO:
+2017-10-25 23:16:57,742 INFO:
+2017-10-25 23:16:57,742 INFO:********************************************************
+2017-10-25 23:16:57,743 INFO:*********Searching for connected MFC devices************
+2017-10-25 23:16:57,744 INFO:Trying address A
+2017-10-25 23:16:57,994 INFO:MFC data returned: A
+2017-10-25 23:16:57,995 INFO:A added to list of found IDs
+2017-10-25 23:16:57,996 INFO:Trying address B
+2017-10-25 23:16:58,347 INFO:MFC data returned: 
+2017-10-25 23:16:58,347 INFO:Trying address C
+2017-10-25 23:16:58,598 INFO:MFC data returned: C
+2017-10-25 23:16:58,599 INFO:C added to list of found IDs
+2017-10-25 23:16:58,599 INFO:Trying address D
+2017-10-25 23:16:58,850 INFO:MFC data returned: D
+2017-10-25 23:16:58,850 INFO:D added to list of found IDs
+2017-10-25 23:16:58,850 INFO:Trying address E
+2017-10-25 23:16:59,201 INFO:MFC data returned: 
+2017-10-25 23:16:59,202 INFO:Trying address F
+2017-10-25 23:16:59,552 INFO:MFC data returned: 
+2017-10-25 23:16:59,553 INFO:Trying address G
+2017-10-25 23:16:59,904 INFO:MFC data returned: 
+2017-10-25 23:16:59,905 INFO:Trying address H
+2017-10-25 23:17:00,256 INFO:MFC data returned: 
+2017-10-25 23:17:00,256 INFO:Trying address I
+2017-10-25 23:17:00,607 INFO:MFC data returned: 
+2017-10-25 23:17:00,608 INFO:Trying address J
+2017-10-25 23:17:00,858 INFO:MFC data returned: J
+2017-10-25 23:17:00,859 INFO:J added to list of found IDs
+2017-10-25 23:17:00,859 INFO:Trying address K
+2017-10-25 23:17:01,210 INFO:MFC data returned: 
+2017-10-25 23:17:01,211 INFO:Trying address L
+2017-10-25 23:17:01,561 INFO:MFC data returned: 
+2017-10-25 23:17:01,562 INFO:Trying address M
+2017-10-25 23:17:01,913 INFO:MFC data returned: 
+2017-10-25 23:17:01,913 INFO:Trying address N
+2017-10-25 23:17:02,264 INFO:MFC data returned: 
+2017-10-25 23:17:02,265 INFO:Trying address O
+2017-10-25 23:17:02,616 INFO:MFC data returned: 
+2017-10-25 23:17:02,617 INFO:Trying address P
+2017-10-25 23:17:02,968 INFO:MFC data returned: 
+2017-10-25 23:17:02,969 INFO:Trying address Q
+2017-10-25 23:17:03,320 INFO:MFC data returned: 
+2017-10-25 23:17:03,321 INFO:Trying address R
+2017-10-25 23:17:03,673 INFO:MFC data returned: 
+2017-10-25 23:17:03,674 INFO:Trying address S
+2017-10-25 23:17:04,025 INFO:MFC data returned: 
+2017-10-25 23:17:04,026 INFO:Trying address T
+2017-10-25 23:17:04,377 INFO:MFC data returned: 
+2017-10-25 23:17:04,378 INFO:Trying address U
+2017-10-25 23:17:04,729 INFO:MFC data returned: 
+2017-10-25 23:17:04,730 INFO:Trying address V
+2017-10-25 23:17:05,082 INFO:MFC data returned: 
+2017-10-25 23:17:05,083 INFO:Trying address W
+2017-10-25 23:17:05,434 INFO:MFC data returned: 
+2017-10-25 23:17:05,435 INFO:Trying address X
+2017-10-25 23:17:05,786 INFO:MFC data returned: 
+2017-10-25 23:17:05,787 INFO:Trying address Y
+2017-10-25 23:17:06,138 INFO:MFC data returned: 
+2017-10-25 23:17:06,147 INFO:Trying address Z
+2017-10-25 23:17:06,498 INFO:MFC data returned: 
+2017-10-25 23:17:06,499 INFO:Done searching for MFC devices, found ['A', 'C', 'D', 'J']
+2017-10-25 23:17:06,500 INFO:********************************************************
+2017-10-25 23:17:06,500 INFO:
+2017-10-25 23:17:06,501 INFO:
+2017-10-25 23:17:06,501 INFO:
+2017-10-25 23:17:06,502 INFO:opening instance of serial port /dev/ttyUSB0(baud:9600,timeout:0.50) for MFC id: A
+2017-10-25 23:17:06,503 INFO:opening instance of serial port /dev/ttyUSB0(baud:9600,timeout:0.50) for MFC id: C
+2017-10-25 23:17:06,504 INFO:opening instance of serial port /dev/ttyUSB0(baud:9600,timeout:0.50) for MFC id: D
+2017-10-25 23:17:06,506 INFO:opening instance of serial port /dev/ttyUSB0(baud:9600,timeout:0.50) for MFC id: J
+2017-10-25 23:17:06,670 INFO:writing command(MFC addr A):  A
+2017-10-25 23:17:06,765 INFO:Received: A +014.53 +029.06 +0000.0 +0000.3 0000.0    C2H6
+2017-10-25 23:17:06,774 INFO:writing command(MFC addr C):  C
+2017-10-25 23:17:06,864 INFO:Received: C +014.63 +029.74 +0001.0 +0000.8 0000.0     Air
+2017-10-25 23:17:06,870 INFO:writing command(MFC addr D):  D
+2017-10-25 23:17:06,927 INFO:Received: D +014.57 +028.85 +0000.0 +0000.0 0000.0    C3H8
+2017-10-25 23:17:06,939 INFO:writing command(MFC addr J):  J
+2017-10-25 23:17:07,000 INFO:Received: J +014.56 +029.03 -0006.3 -0006.0 0000.0      H2
+2017-10-25 23:17:29,536 INFO:User clicked 'Start Test' button
+2017-10-25 23:17:29,541 INFO:writing command(MFC addr A):  AS0.10
+2017-10-25 23:17:29,647 INFO:Received: A +014.53 +029.06 -0000.3 -0000.4 0000.1    C2H6
+2017-10-25 23:17:29,648 INFO:writing command(MFC addr C):  CS0.20
+2017-10-25 23:17:29,717 INFO:Received: C +014.63 +029.74 +0001.2 +0001.2 0000.2     Air
+2017-10-25 23:17:29,718 INFO:writing command(MFC addr D):  DS0.30
+2017-10-25 23:17:29,787 INFO:Received: D +014.56 +028.85 -0000.0 +0000.1 0000.3    C3H8
+2017-10-25 23:17:29,788 INFO:writing command(MFC addr J):  JS0.40
+2017-10-25 23:17:29,825 INFO:Discarding line with single setpoint returned: 0.4000
+2017-10-25 23:17:29,876 INFO:Received: J +014.55 +029.03 -0006.1 -0006.0 0000.4      H2
+2017-10-25 23:17:30,090 INFO:***************** Next Sample Point ***************
+2017-10-25 23:17:30,090 INFO:Trigger output voltage set high
+2017-10-25 23:17:30,092 INFO:Delay thread started...
+2017-10-25 23:17:30,500 INFO:Delay thread timer ended... now handler(s) will be called
+2017-10-25 23:17:30,500 INFO:Trigger output voltage set low
+2017-10-25 23:17:32,093 INFO:***************** Next Sample Point ***************
+2017-10-25 23:17:32,094 INFO:Trigger output voltage set high
+2017-10-25 23:17:32,096 INFO:Delay thread started...
+2017-10-25 23:17:32,498 INFO:Delay thread timer ended... now handler(s) will be called
+2017-10-25 23:17:32,499 INFO:Trigger output voltage set low
+2017-10-25 23:17:34,097 INFO:***************** Next Sample Point ***************
+2017-10-25 23:17:34,098 INFO:Trigger output voltage set high
+2017-10-25 23:17:34,099 INFO:Delay thread started...
+2017-10-25 23:17:34,502 INFO:Delay thread timer ended... now handler(s) will be called
+2017-10-25 23:17:34,503 INFO:Trigger output voltage set low
+2017-10-25 23:17:36,100 INFO:***************** Next Sample Point ***************
+2017-10-25 23:17:36,100 INFO:Trigger output voltage set high
+2017-10-25 23:17:36,101 INFO:Delay thread started...
+2017-10-25 23:17:36,504 INFO:Delay thread timer ended... now handler(s) will be called
+2017-10-25 23:17:36,505 INFO:Trigger output voltage set low
+2017-10-25 23:17:38,102 INFO:***************** Next Sample Point ***************
+2017-10-25 23:17:38,102 INFO:Trigger output voltage set high
+2017-10-25 23:17:38,103 INFO:Delay thread started...
+2017-10-25 23:17:38,507 INFO:Delay thread timer ended... now handler(s) will be called
+2017-10-25 23:17:38,508 INFO:Trigger output voltage set low
+2017-10-25 23:17:39,908 INFO:writing command(MFC addr A):  AS0.00
+2017-10-25 23:17:39,977 INFO:Received: A +014.53 +029.06 -0000.3 -0000.4 0000.0    C2H6
+2017-10-25 23:17:39,978 INFO:writing command(MFC addr C):  CS0.00
+2017-10-25 23:17:40,086 INFO:Received: C +014.64 +029.74 +0001.1 +0000.7 0000.0     Air
+2017-10-25 23:17:40,086 INFO:writing command(MFC addr D):  DS0.00
+2017-10-25 23:17:40,104 INFO:***************** Next Sample Point ***************
+2017-10-25 23:17:40,105 INFO:Trigger output voltage set high
+2017-10-25 23:17:40,106 INFO:Delay thread started...
+2017-10-25 23:17:40,189 INFO:Received: D +014.56 +028.85 -0000.4 -0000.3 0000.0    C3H8
+2017-10-25 23:17:40,189 INFO:writing command(MFC addr J):  JS0.00
+2017-10-25 23:17:40,224 INFO:Discarding line with single setpoint returned: 0.0000
+2017-10-25 23:17:40,275 INFO:Received: J +014.56 +029.03 -0006.1 -0006.1 0000.0      H2
+2017-10-25 23:17:40,508 INFO:Delay thread timer ended... now handler(s) will be called
+2017-10-25 23:17:40,510 INFO:Trigger output voltage set low
+2017-10-26 00:39:37,921 INFO:Exiting Application
+2017-10-26 00:39:37,924 INFO:Closing serial connection to MFC addr A
+2017-10-26 00:39:37,926 INFO:Closing serial connection to MFC addr C
+2017-10-26 00:39:37,928 INFO:Closing serial connection to MFC addr D
+2017-10-26 00:39:37,930 INFO:Closing serial connection to MFC addr J
